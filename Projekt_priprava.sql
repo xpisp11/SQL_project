@@ -1,30 +1,16 @@
+-- 1. Studium všech tabulek, jejich sloupcù, klíèù pro JOINy s jinými tabulkami
+ 
 SELECT * FROM countries;	-- country, population, population density, median age 2018, iso 3 (totožné s ISO z covid19_test)
-
-
 SELECT * FROM economies; 	-- country, year, GDP, population (2019), gini (rùzné roky), mortality under 5 (2019)
-
-
 SELECT * FROM life_expectancy;		-- country, iso3, year, life expectancy	
-
-
 SELECT * FROM religions;	-- year (vzít 2020), country, religion (náboženství v dané zemi), population (pøíslušníci daného náboženství)
-
-
 SELECT * FROM covid19_basic_differences;  -- denní pøírustky ve všech zemích (country, date)
-
-
 SELECT * FROM covid19_tests;		-- denní a kumulativní poèty provedených testù ve všech zemích (country, date, ISO)
-
-
 SELECT * FROM weather;		-- date, time, temp, gust, rain 
-
-
 SELECT * FROM lookup_table;		-- country, iso3, population
 
 
-  /*************/
- /*  ISSUES   */
-/*************/ 
+ -- 2. Øešení "issues" v datech èi tabulkách
 
 /* GDP, gini koeficient a mortality under 5:
    Tyto promìnné jsou v rùzných zemích zadávány rùznì (v nìkterých zemích je nejaktuálnìjší hodnota z roku 2018, v jiných tøeba i z 90. let), 
@@ -68,8 +54,10 @@ ORDER BY country, `year` DESC;
    Takže mùžu první dvì a druhé tøi tabulky spojit pøes shodný název zemì a pak výsledné dvì tabulky spojit pøes iso3 (je v lookup a v countries).*/
 
 
-/* 1.) Napøed si pøipravím tabulku s aktuálními hodnotami GDP, gini a mortality_under5, kterou pak spojím s countries, èímž získám "stavovou" tabulku
-      se sloupci: country, GDP, gini, mortality_under5, iso3, population_density, median_age_2018  (uloženo jako v_joined_economies_actual_countries) */
+/* 3. První spojení tabulek 
+ 	  
+ 	  a) Napøed si pøipravím tabulku s aktuálními hodnotami GDP, gini a mortality_under5, kterou pak spojím s countries, èímž získám "stavovou" tabulku
+         se sloupci: country, GDP, gini, mortality_under5, iso3, population_density, median_age_2018  (uloženo jako v_joined_economies_countries) */
 
 CREATE OR REPLACE VIEW v_joined_economies_countries AS
 WITH
@@ -119,7 +107,7 @@ LEFT JOIN mortality_actual m
  	   ON gdp.country = m.country
  ORDER BY gdp.country
 )
--- Nakonec spojím tabulky economies_actual a countries:
+-- Spojím tabulky economies_actual a countries:
 SELECT
 	e.*,
 	c.iso3 AS ISO,
@@ -127,16 +115,23 @@ SELECT
 	c.median_age_2018 AS "medián_vìku_2018"
 FROM economies_actual e
 LEFT JOIN countries c 
-   ON e.zemì = c.country
-ORDER BY e.zemì;
-
+	ON e.zemì = c.country
+ORDER BY e.zemì
+;
 
 SELECT * FROM v_joined_economies_countries
 
 
-/* 2.) Spojím tabulky covid19_basic_differences a lookup_table, èímž získám požadované sloupce date, country, confirmed a population (se kterou chci dál poèítat). */
-CREATE OR REPLACE VIEW v_joined_covid_lookup_economies_countries AS
+/*     b) Spojím tabulky covid19_basic_differences a lookup_table, èímž získám požadované sloupce date, country, confirmed a population (se kterou chci 
+          dál poèítat). 
+          Na tuto novou tabulku pøes ISO pøipojím ještì tabulku covid19_tests, abych získala sloupec s denními testy.
+          Nakonec pøipojím pøes iso3 s tabulkou v_joined_economies_countries. Tím získám "vývojovou" tabulku se sloupci date, country, iso3, 
+          confirmed, test, population, gdp, gini, mortality_under5, population_density_median_age_2018. 
+          Tuto výslednou tabulku si opìt uložím do VIEW v_joined_covid_lookup_economies_countries  */
+
+CREATE OR REPLACE VIEW v_joined_covid_lookup_tests_economies_countries AS
 WITH 
+-- Spojím coivd19_basic s lookup_table, tím získám k datùm z covid19_basic iso3
 joined_covid_lookup AS	
 (
 	SELECT
@@ -149,26 +144,39 @@ joined_covid_lookup AS
 LEFT JOIN lookup_table lt 
   	  ON cbd.country = lt.country
   	 AND lt.province IS NULL
-	ORDER BY cbd.country
+-- 	ORDER BY cbd.`date`
+),
+-- Pøipojím covid19_tests
+joined_covid_lookup_tests AS 
+(
+	SELECT
+		jcl.*,
+		ct.tests_performed
+	FROM joined_covid_lookup jcl 
+	LEFT JOIN covid19_tests ct
+		ON jcl.`date` = ct.`date`
+	   AND jcl.iso3 = ct.ISO
+-- 	ORDER BY jcl.`date`
 )
-/* Tuto novou tabulku spojím pøes iso3 s v_joined_economies_countries. Tím získám "vývojovou" tabulku se sloupci date, country, iso3, confirmed, population,
-   gdp, gini, mortality_under5, population_density_median_age_2018. */
+-- Spojím dvì novì vytvoøené tabulky dohromady
 SELECT 
 	base.`date` AS datum,
 	base.country AS zemì,
 	base.iso3 AS ISO,
 	base.confirmed AS "denní_nárust_nakažených",
+	base.tests_performed AS "denní testy",
 	base.population AS "poèet_obyvatel",
 	v.HDP,
 	v.gini_koeficient,
 	v.dìtská_úmrtnost,
 	v.hustota_zalidnìní,
 	v.medián_vìku_2018
-FROM joined_covid_lookup base 
+FROM joined_covid_lookup_tests base 
 LEFT JOIN (SELECT * FROM v_joined_economies_countries) v 
 	ON base.iso3 = v.ISO
-ORDER BY base.country
--- Tuto výslednou tabulku si opìt uložím do VIEW v_joined_covid_lookup_economies_countries 
+-- ORDER BY base.country
 ;
+-- Tuto výslednou tabulku si opìt uložím do VIEW v_joined_covid_lookup_economies_countries 
 
-SELECT * FROM v_joined_covid_lookup_economies_countries
+-- kontrola
+SELECT * FROM v_joined_covid_lookup_tests_economies_countries WHERE ISO = 'SWE';
