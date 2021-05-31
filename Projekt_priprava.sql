@@ -124,10 +124,11 @@ SELECT * FROM v_joined_economies_countries
 
 /*     b) Spojím tabulky covid19_basic_differences a lookup_table, èímž získám požadované sloupce date, country, confirmed a population (se kterou chci 
           dál poèítat). 
-          Na tuto novou tabulku pøes ISO pøipojím ještì tabulku covid19_tests, abych získala sloupec s denními testy.
+          Na tuto novou tabulku pøes ISO pøipojím ještì tabulku covid19_tests, resp. upravenou tabulku covid19_tests_new, abych získala sloupec 
+          s denními testy.
           Nakonec pøipojím pøes iso3 s tabulkou v_joined_economies_countries. Tím získám "vývojovou" tabulku se sloupci date, country, iso3, 
           confirmed, test, population, gdp, gini, mortality_under5, population_density_median_age_2018. 
-          Tuto výslednou tabulku si opìt uložím do VIEW v_joined_covid_lookup_economies_countries  */
+          Tuto výslednou tabulku si opìt uložím do VIEW v_joined_covid_lookup_tests_economies_countries  */
 
 CREATE OR REPLACE VIEW v_joined_covid_lookup_tests_economies_countries AS
 WITH 
@@ -164,7 +165,7 @@ SELECT
 	base.country AS zemì,
 	base.iso3 AS ISO,
 	base.confirmed AS "denní_nárust_nakažených",
-	base.tests_performed AS "denní testy",
+	base.tests_performed AS "denní_testy",
 	base.population AS "poèet_obyvatel",
 	v.HDP,
 	v.gini_koeficient,
@@ -176,7 +177,58 @@ LEFT JOIN (SELECT * FROM v_joined_economies_countries) v
 	ON base.iso3 = v.ISO
 -- ORDER BY base.country
 ;
--- Tuto výslednou tabulku si opìt uložím do VIEW v_joined_covid_lookup_economies_countries 
+-- Tuto výslednou tabulku si opìt uložím do VIEW v_joined_covid_lookup_tests_economies_countries 
 
--- kontrola
-SELECT * FROM v_joined_covid_lookup_tests_economies_countries WHERE ISO = 'SWE';
+
+/* Kvùli problémùm se dvìma záznami o testech u jednoho data u nìkterých zemí jsem vytvoøila novou tabulku covid19_tests_new a ve výše uvedeném VIEW
+   touto tabulkou nahradím pùvodní tabulku covid19_tests */
+CREATE OR REPLACE VIEW v_joined_covid_lookup_tests_economies_countries AS
+WITH 
+-- Spojím coivd19_basic s lookup_table, tím získám k datùm z covid19_basic iso3
+joined_covid_lookup AS	
+(
+	SELECT
+		cbd.`date`,
+		cbd.country,
+		lt.iso3,
+		cbd.confirmed,
+		lt.population
+	FROM covid19_basic_differences cbd
+LEFT JOIN lookup_table lt 
+  	  ON cbd.country = lt.country
+  	 AND lt.province IS NULL
+-- 	ORDER BY cbd.`date`
+),
+-- Pøipojím covid19_tests
+joined_covid_lookup_tests AS 
+(
+	SELECT
+		jcl.*,
+		vct.tests_performed
+	FROM joined_covid_lookup jcl 
+	LEFT JOIN v_covid19_tests_new vct
+		ON jcl.`date` = vct.`date`
+	   AND jcl.iso3 = vct.ISO
+-- 	ORDER BY jcl.`date`
+)
+-- Spojím dvì novì vytvoøené tabulky dohromady
+SELECT 
+	base.`date` AS datum,
+	base.country AS zemì,
+	base.iso3 AS ISO,
+	base.confirmed AS "denní_nárust_nakažených",
+	base.tests_performed AS "denní_testy",
+	base.population AS "poèet_obyvatel",
+	ROUND(v.HDP/base.population) AS "HDP_na_obyvatele",		-- ve výsledné tabulce jsem ještì místo celkového HDP dopoèítala HDP na obyvatele 
+	v.gini_koeficient,
+	v.dìtská_úmrtnost,
+	v.hustota_zalidnìní,
+	v.medián_vìku_2018
+FROM joined_covid_lookup_tests base 
+LEFT JOIN (SELECT * FROM v_joined_economies_countries) v 
+	ON base.iso3 = v.ISO
+-- ORDER BY base.country
+;
+
+-- zkouška
+SELECT * FROM v_joined_covid_lookup_tests_economies_countries WHERE ISO = 'USA';
