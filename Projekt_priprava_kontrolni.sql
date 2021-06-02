@@ -1,6 +1,6 @@
 -- mezikrok: spojení covid19_basic_diff s lookup a pak s economies a countries (bez covid19_tests)
 
-CREATE OR REPLACE VIEW v_joined_covid_lookup_economies_countries AS
+CREATE OR REPLACE VIEW v_joined_cov_lt_eco_co_rel AS
 WITH 
 -- Spojím coivd19_basic s lookup_table, tím získám k datùm z covid19_basic iso3
 joined_covid_lookup AS	
@@ -15,7 +15,6 @@ joined_covid_lookup AS
 LEFT JOIN lookup_table lt 
   	  ON cbd.country = lt.country
   	 AND lt.province IS NULL
--- 	ORDER BY cbd.`date`
 )
 -- Spojím dvì novì vytvoøené tabulky dohromady
 SELECT 
@@ -24,18 +23,39 @@ SELECT
 	base.iso3 AS ISO,
 	base.confirmed AS "denní_nárust_nakažených",
 	base.population AS "poèet_obyvatel",
-	v.HDP,
+	-- 4. Pøidání nových sloupcù: binární promìnná pro víkend / pracovní den
+	CASE 
+		WHEN WEEKDAY(base.`date`) IN (5, 6) THEN 1 
+		ELSE 0 
+		END AS "víkend",
+	-- 4. Pøidání nových sloupcù: roèní období
+	CASE 
+		WHEN base.`date` < '2020-03-20' OR (base.`date` BETWEEN '2020-12-21' AND '2021-03-19') THEN "zima"
+		WHEN base.`date` < '2020-06-20' OR (base.`date` BETWEEN '2021-03-20' AND '2021-06-20') THEN "jaro"
+		WHEN base.`date` < '2020-09-22' THEN "léto"
+		WHEN base.`date` < '2020-12-21' THEN "podzim"
+		END AS "roèní období",
+	-- ve výsledné tabulce jsem ještì místo celkového HDP dopoèítala HDP na obyvatele 
+	ROUND(v.HDP/base.population) AS "HDP_na_obyvatele",		
 	v.gini_koeficient,
-	v.dìtská_úmrtnost,
-	v.hustota_zalidnìní,
-	v.medián_vìku_2018
+	v.`dìtská_úmrtnost`,
+	v.`hustota_zalidnìní`,
+	v.`medián_vìku_2018`,
+	-- ve výsledné tabulce jsem ještì dopoèítala podíl pøíslušníkù jednotlivých náboženství na celkové populaci zemì
+	CONCAT(ROUND(v.`køesanství`/base.population * 100,1), ' %') AS "podíl_køesanù",
+	CONCAT(ROUND(v.`islám`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_islámu",
+	CONCAT(ROUND(v.`hinduismus`/base.population * 100,1), ' %') AS "podíl_hinduistù",
+	CONCAT(ROUND(v.`budhismus`/base.population * 100,1), ' %') AS "podíl_budhistù",
+	CONCAT(ROUND(v.`judaismus`/base.population * 100,1), ' %') AS "podíl_židù",
+	CONCAT(ROUND(v.`nepøidružená_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_nepøidruž._náb.",
+	CONCAT(ROUND(v.`lidová_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_lid._náb.",
+	CONCAT(ROUND(v.`jiná náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_jiných_náb."	
 FROM joined_covid_lookup base 
-LEFT JOIN (SELECT * FROM v_joined_economies_countries) v 
+LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v 
 	ON base.iso3 = v.ISO
--- ORDER BY base.country
 ;
 
--- kontrola velikosti tabulky v_joined_covid_lookup_economies_countries (tím ovìøím spojení pomocí LEFT JOIN)  - OK (88 452)
+-- kontrola velikosti tabulky v_joined_cov_lt_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	OK (88 452)
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
 	COUNT(*) AS "Poèet_øádkù"
@@ -44,10 +64,10 @@ UNION
 SELECT 
 	"joined_table" AS "Tabulka",
 	COUNT (*) AS "Poèet_øádkù"
-FROM v_joined_covid_lookup_economies_countries;
+FROM v_joined_cov_lt_eco_co_rel;
 
 
--- kontrola velikosti tabulky v_joined_covid_lookup_tests_economies_countries (tím ovìøím spojení pomocí LEFT JOIN)  - NE OK (89 874!!!)
+-- kontrola velikosti tabulky v_joined_co_lt_tests_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	NE OK (89 874!!!)
 -- - po pøipojení covid19_tests došlo k navýšení poètu øádkù
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
@@ -57,10 +77,10 @@ UNION
 SELECT 
 	"joined_table" AS "Tabulka",
 	COUNT (*) AS "Poèet_øádkù"
-FROM v_joined_covid_lookup_tests_economies_countries;
+FROM v_joined_cov_lt_tests_eco_co_rel;
 
 
--- kontrola potenciálnì problematický zemí - problém ve sloupci entity v tabulce covid19_tests
+-- kontrola potenciálnì problematických zemí - problém ve sloupci entity v tabulce covid19_tests
 SELECT 
 	"všechna" AS "Data",
 	COUNT(`date`) AS Row_count 
@@ -117,7 +137,7 @@ FROM v_covid19_tests_new
 WHERE country = 'Singapore';
 
 
--- kontrola velikosti tabulky v_joined_covid_lookup_tests_economies_countries 	
+-- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel 			OK (88 452)
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
 	COUNT(*) AS "Poèet_øádkù"
@@ -126,8 +146,8 @@ UNION
 SELECT 
 	"joined_table" AS "Tabulka",
 	COUNT (*) AS "Poèet_øádkù"
-FROM v_joined_covid_lookup_tests_economies_countries;	-- OK (88 452)
+FROM v_joined_cov_lt_tests_eco_co_rel;	
 
 
--- kontrola velikosti tabulky v_joined_covid_lookup_tests_economies_countries_weather
-SELECT COUNT(*) FROM v_joined_covid_lookup_tests_economies_countries_weather;	-- OK (88 452)
+-- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel_w		OK (88 452)
+SELECT COUNT(*) FROM v_joined_cov_lt_tests_eco_co_rel_w;			
