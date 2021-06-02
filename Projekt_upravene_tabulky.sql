@@ -1,5 +1,7 @@
--- covid19_tests_new
-
+  /***********************/
+ /*  covid19_tests_new  */ 
+/***********************/
+  
 /* Pøipravím si nové tabulky covid19_tests pro "problematické" zemì, ve kterých urèím jen jednu entitu. Pomocí UNION tyto tabulky spojím spolu navzájem
    a také s tabulkou covid19_tests bez tìchto zemí. Tím získám novou tabulku covid19_tests_new, která už u tìchto "problematických" zemí nebude mít
    zdvojené záznamy pro žádné datum */
@@ -47,28 +49,73 @@ WHERE country NOT IN ('France', 'India', 'Italy', 'Japan', 'Poland', 'Singapore'
 
 SELECT * FROM v_covid19_tests_new; 
 
+  /*********************/
+ /*  life_expectancy  */
+/*********************/
 
--- weather_new
+-- Podívám se, jak tabulka vypadá.
+SELECT * FROM life_expectancy;
 
--- Pøepíšu si názvy hlavních mìst v tabulce weather tak, aby byly shodné s názvy v tabulce countries 
- 
-SELECT DISTINCT city FROM weather ORDER BY city;
-SELECT DISTINCT capital_city FROM countries ORDER BY capital_city;
+/*Tabulka má sloupec iso3, pøes který mùžu pomocí LEFT JOIN tabulku pøipojit k velké výsledné tabulce. Napøed ale musím øádky s rokem 1965 a 2015 
+  transponovat do sloupcù, abych od sebe mohla hodnoty snadno odeèíst */
 
-CREATE OR REPLACE VIEW v_weather_new AS
+WITH 
+-- transponování
+pivoted_life_expectancy AS 
+(
+	SELECT 
+        iso3,
+        MAX(CASE WHEN year = 1965 THEN life_expectancy END) AS life_expectancy_1965,
+        MAX(CASE WHEN year = 2015 THEN life_expectancy END) AS life_expectancy_2015
+    FROM life_expectancy
+    GROUP BY iso3
+)
+-- pøipojení tabulky k velké výsledné tabulce
 SELECT
-	*,
-	CASE 
-		WHEN city = 'Athens' THEN 'Athenai'
-		WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
-		WHEN city = 'Bucharest' THEN 'Bucuresti'
-		WHEN city = 'Helsinki' THEN 'Helsinki [Helsingfors]'
-		WHEN city = 'Kiev' THEN 'Kyiv'
-		WHEN city = 'Lisbon' THEN 'Lisboa'
-		WHEN city = 'Luxembourg' THEN 'Luxembourg [Luxemburg/L'
-		WHEN city = 'Rome' THEN 'Roma'
-		WHEN city = 'Vienna' THEN 'Wien'
-		WHEN city = 'Warsaw' THEN 'Warszawa'
-	ELSE city
-	END AS "capital_city"
-FROM weather;
+    base.*,
+    ROUND(le.life_expectancy_2015 - le.life_expectancy_1965,1) AS "rozdíl_dožití_2015_1965"
+FROM v_joined_covid_lookup_tests_economies_countries_weather base
+LEFT JOIN pivoted_life_expectancy le
+  ON base.ISO = le.iso3
+WHERE base.ISO = 'CZE'
+
+
+  /**************/
+ /*  religion  */
+/**************/
+-- Podívám se, jak tabulka vypadá. Zajímají mì jen údaje z roku 2020 a to pro jednotlivé zemì (ne All Countries) 
+SELECT * FROM religions WHERE `year` = '2020' AND country <> 'All Countries';
+
+/* Abych mohla stanovit podíly pøíslušníkù jednotlivých náboženství v zemi na celkovém obyvatelstvu, musím napøed spojit tabulku religion s tabulkou
+   obsahující informaci o celkové populaci zemì (nejlépe lookup_table, kterou jsem si na zaèátku urèila jako výchozí pro hodnoty poètu obyvatel státù). 
+   Zjistím, jaké názvy mají zemì v tabulce (napø. jestli ÈR je Czech Republic jako v tabulce economies a countries nebo Czechia jako v tabulce 
+   lookuup_table a covid19_basic_differences) */
+
+SELECT DISTINCT country FROM religions WHERE country <> 'All Countries' ORDER BY country;
+
+/* Názvy jsou stejné jako v tabulká economies a countries, takže tabulku religion nejprve pøipojím k v_joined_economies_countries, abych následnì
+     a vytvoøím nové VIEW
+   v_joined_economies_countries_religion */
+
+WITH
+religion AS
+( 
+	SELECT
+		country,
+		religion,
+		population
+	FROM religions 
+	WHERE 1=1
+		AND `year` = '2020' 
+		AND country <> 'All Countries'
+		AND population > 0
+)
+SELECT
+	r.*,
+	base.*
+FROM v_joined_economies_countries base
+LEFT JOIN religion r 
+ON base.zemì = r.country
+;
+
+SELECT * FROM v_joined_economies_countries vjec 
