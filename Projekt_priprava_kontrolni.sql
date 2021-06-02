@@ -47,7 +47,7 @@ SELECT
 FROM v_joined_covid_lookup_economies_countries;
 
 
--- kontrola velikosti tabulky v_joined_covid_lookup_tests_economies_countries (tím ovìøím spojení pomocí LEFT JOIN)  - NE OK 89 874!!!
+-- kontrola velikosti tabulky v_joined_covid_lookup_tests_economies_countries (tím ovìøím spojení pomocí LEFT JOIN)  - NE OK (89 874!!!)
 -- - po pøipojení covid19_tests došlo k navýšení poètu øádkù
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
@@ -126,4 +126,8 @@ UNION
 SELECT 
 	"joined_table" AS "Tabulka",
 	COUNT (*) AS "Poèet_øádkù"
-FROM v_joined_covid_lookup_tests_economies_countries;	-- OK 88 452
+FROM v_joined_covid_lookup_tests_economies_countries;	-- OK (88 452)
+
+
+-- kontrola velikosti tabulky v_joined_covid_lookup_tests_economies_countries_weather
+SELECT COUNT(*) FROM v_joined_covid_lookup_tests_economies_countries_weather;	-- OK (88 452)
