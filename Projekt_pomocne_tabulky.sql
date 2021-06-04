@@ -1,4 +1,27 @@
-  /***********************/
+  /*****************************/ 
+ /*  Austrálie, Èína, Kanada  */ 
+/*****************************/
+  
+ /* Údaje pro tyto zemì z tabulky covid19_detail_global_differences pøipojím pøes UNION k tabulce covid19_basic_differences. Nejprve ale musím v tabulce
+    covid19_detail_global_differences použít GROUP BY, abych hodnoty za jednotlivé provincie spojila do jednoho celkového souètu pro každé datum. */
+
+SELECT		-- použiju ve WITH jako covid_Australia_Canada_China
+	`date`,
+	country,
+	SUM(confirmed) AS confirmed,
+	SUM(deaths) AS deaths,
+	SUM(recovered) AS recovered 
+FROM covid19_detail_global_differences 
+WHERE country IN ('Australia', 'Canada', 'China') 
+GROUP BY country, `date`
+UNION 
+SELECT 
+	*
+FROM covid19_basic_differences;
+
+
+
+/***********************/
  /*  covid19_tests_new  */ 
 /***********************/
   
@@ -119,9 +142,9 @@ SELECT DISTINCT country FROM religions WHERE country <> 'All Countries' ORDER BY
 
 
 
-  /*********************/
- /*  life_expectancy  */
-/*********************/
+  /********************************/
+ /*  Pivotování life_expectancy  */
+/********************************/
 
 -- Podívám se, jak tabulka vypadá.
 SELECT * FROM life_expectancy;
