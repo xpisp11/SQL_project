@@ -1,5 +1,7 @@
--- 1. Studium všech tabulek, jejich sloupcù, klíèù pro JOINy s jinými tabulkami
- 
+  /********************************/
+ /*   1. Studium všech tabulek   */
+/********************************/ 
+   
 SELECT * FROM countries;	-- country, population, population density, median age 2018, iso 3 (totožné s ISO z covid19_test)
 SELECT * FROM economies; 	-- country, year, GDP, population (2019), gini (rùzné roky), mortality under 5 (2019)
 SELECT * FROM life_expectancy;		-- country, iso3, year, life expectancy	
@@ -10,11 +12,10 @@ SELECT * FROM weather;		-- date, time, temp, gust, rain
 SELECT * FROM lookup_table;		-- country, iso3, population
 
 
- -- 2. Øešení "issues" v datech èi tabulkách
+-- 2. Øešení "issues" v datech èi tabulkách
 
 /* GDP, gini koeficient a mortality under 5:
-   Tyto promìnné jsou v rùzných zemích zadávány rùznì (v nìkterých zemích je nejaktuálnìjší hodnota z roku 2018, v jiných tøeba i z 90. let), 
-   bude tedy potøeba pro každou zemi vzít hodnotu z jiného roku */
+   Hodnoty ukazatelù jsem vzala v každé zemi nejaktuálnìjší, které jsou k dispozici, tj. našla jsem poslední rok (MAX(year)), ve kterém byly tyto ukazatele NOT NULL */
 SELECT 		
 	country,
 	MAX(year),
@@ -23,15 +24,9 @@ FROM economies
 WHERE gini IS NOT NULL		
 GROUP BY country;	
 
-/* population:
-   V tabulce countries a lookup_table je population statická (nevím, ze kterého roku), v tabulce economies dynamická (vyplnìná do roku 2019, v roce 2020 NULL).
-   Musím se rozhodnout, ze které tabulky údaj k population použiju.
 
-Spojím si tabulky dohromady pøes INNER JOIN a z hodnot vidím, že údaje k population z tabulky countries jsou z roku 2018, údaje z tabulky lookup_table 
-pravdìpodobnì z roku 2020 (jsou vìtší než údaje z economies z roku 2019). Pro rámcovou kontrolu jsem si ještì doplnila sloupce s meziroèním rùstem populace,
-ve kterých vidím, že rùst 2019/2018 a 2020/2019 je v náhodnì vybraných zemích velmi podobný, takže údaje z lookup_table jsou s velkou pravdìpodobností z 2020.
-Údaj k celkové populaci tedy vezmu z tabulky lookup_table. */
-
+-- population:
+-- - spojení tabulek a kontrolní sloupce s meziroèním rùstem populace
 SELECT 
 	e.country,
 	e.`year`,
@@ -49,19 +44,22 @@ GROUP BY country, `year`
 ORDER BY country, `year` DESC;
 
 
-/* rùzné názvy státù v rùzných tabulkách:
-   Názvy zemí jsou shodné v tabulkách covid_basic a lookup (napø. Czechia, US) a v tabulkách covid_tests, economies a countries (napø. Czech Republic a United States).
-   Takže mùžu první dvì a druhé tøi tabulky spojit pøes shodný název zemì a pak výsledné dvì tabulky spojit pøes iso3 (je v lookup a v countries).*/
+-- rùzné názvy státù v rùzných tabulkách
+-- - kontrola názvù státù v tabulkách   
+SELECT DISTINCT country FROM economies;
+SELECT DISTINCT country FROM countries;
+SELECT DISTINCT country FROM lookup_table;
+SELECT DISTINCT country FROM covid19_basic_differences;
+SELECT DISTINCT country FROM covid19_tests;
+SELECT DISTINCT country FROM religions;
 
 
-/* 3. První spojení tabulek 
- 	  
-a) Propojení tabulek economies, countries, religions, 
-   Napøed si pøipravím tabulku s aktuálními hodnotami GDP, gini a mortality_under5, kterou pak spojím s countries a pivoted_religions,
-   èímž získám "stavovou" tabulku se sloupci: country, GDP, gini, mortality_under5, iso3, population_density, median_age_2018 a 
-   sloupci pro poèet pøíslušníkù jednotlivých náboženství  
-   (uloženo jako v_joined_eco_co_rel) */
 
+  /******************************/
+ /*  3. První spojení tabulek  */
+/******************************/ 	  
+
+-- a) Propojení tabulek economies, countries, religions - uloženo jako v_joined_eco_co_rel  
 CREATE OR REPLACE VIEW v_joined_eco_co_rel AS
 WITH
 -- Napøed pøipravím 3 tabulky s aktuálními hodnotami GDP, gini a mortality_under5: 
@@ -123,6 +121,7 @@ joined_economies_countries AS
 		ON e.zemì = c.country
 	ORDER BY e.zemì
 ),
+-- Pøipravím si sloupce s poètem pøíslušníkù jednotlivých náboženství
 pivoted_religions AS
 ( 
 	SELECT 
@@ -154,36 +153,44 @@ LEFT JOIN pivoted_religions r
 SELECT * FROM v_joined_eco_co_rel;
 
 
-/* b) Propojení covid19_basic_diff s lookup a covid19_tests
-      Spojím tabulky covid19_basic_differences a lookup_table, èímž získám požadované sloupce date, country, confirmed a population 
-      (se kterou chci dál poèítat). 
-      Na tuto novou tabulku pøes ISO pøipojím ještì tabulku covid19_tests, resp. upravenou tabulku covid19_tests_new, abych získala 
-      sloupec s denními testy.
-      Nakonec spojím pøes iso3 s tabulkou v_joined_eco_co_rel. Tím získám "vývojovou" tabulku se sloupci datum, zemì, ISO,
-      denní nárùst nakažených, denní testy, poèet obyvatel, HDP na obyvatele, gini koeficient, dìtská úmrtnost, hustota zalidnìní, 
-      medián vìku v roce 2018 a sloupce s podíly jednotlivých náboženství na populaci. 
-      Tuto výslednou tabulku si opìt uložím do VIEW v_joined_cov_lt_tests_eco_co_rel  */
 
-/* Kvùli problémùm se dvìma záznami o testech u jednoho data u nìkterých zemí (viz. Projekt_priprava_kontrolni.sql) jsem vytvoøila novou tabulku 
-   covid19_tests_new (viz. Projekt_upravene_tabulky.sql), kterou použiju místo tabulky covid19_tests */
-
+-- b) Propojení covid19_basic_diff s lookup a covid19_tests - uloženo jako v_joined_cov_lt_tests_eco_co_rel  
 CREATE OR REPLACE VIEW v_joined_cov_lt_tests_eco_co_rel AS
 WITH 
--- Spojím coivd19_basic s lookup_table, tím získám k datùm z covid19_basic iso3
+-- Spojím pøes UNION záznamy pro Austrálii, Èínu a Kanadu z covid19_detail_global_differences a covid19_basic_differences 
+covid_Australia_Canada_China AS
+(
+	SELECT		
+		`date`,
+		country,
+		SUM(confirmed) AS confirmed,
+		SUM(deaths) AS deaths,
+		SUM(recovered) AS recovered 
+	FROM covid19_detail_global_differences 
+	WHERE country IN ('Australia', 'Canada', 'China') 
+	GROUP BY country, `date`
+	UNION 
+	SELECT 
+		*
+	FROM covid19_basic_differences
+),
+-- Spojím covid_Australia_Canada_China (tj. rozšíøenou tabulku covid19_basic_differences) s lookup_table, tím získám k datùm o confirmed také iso3
 joined_covid_lookup AS	
 (
 	SELECT
-		cbd.`date`,
-		cbd.country,
+		cacc.`date`,
+		cacc.country,
 		lt.iso3,
-		cbd.confirmed,
+		cacc.confirmed,
 		lt.population
-	FROM covid19_basic_differences cbd
+	FROM covid_Australia_Canada_China cacc
 LEFT JOIN lookup_table lt 
-  	  ON cbd.country = lt.country
+  	  ON cacc.country = lt.country
   	 AND lt.province IS NULL
 ),
 -- Pøipojím covid19_tests_new
+/* Kvùli problémùm se dvìma záznami o testech u jednoho data u nìkterých zemí (viz. Projekt_priprava_kontrolni.sql) jsem vytvoøila novou tabulku 
+   covid19_tests_new (viz. Projekt_upravene_tabulky.sql), kterou použiju místo tabulky covid19_tests */
 joined_covid_lookup_tests AS 
 (
 	SELECT
@@ -202,25 +209,25 @@ SELECT
 	base.confirmed AS "denní_nárust_nakažených",
 	base.tests_performed AS "denní_testy",
 	base.population AS "poèet_obyvatel",
-	-- 4. Pøidání nových sloupcù: binární promìnná pro víkend / pracovní den
+	-- 4. Pøidám nový sloupec: binární promìnná pro víkend / pracovní den
 	CASE 
 		WHEN WEEKDAY(base.`date`) IN (5, 6) THEN 1 
 		ELSE 0 
 		END AS "víkend",
-	-- 4. Pøidání nových sloupcù: roèní období
+	-- 4. Pøidám nový sloupec: roèní období
 	CASE 
-		WHEN base.`date` < '2020-03-20' OR (base.`date` BETWEEN '2020-12-21' AND '2021-03-19') THEN "zima"
-		WHEN base.`date` < '2020-06-20' OR (base.`date` BETWEEN '2021-03-20' AND '2021-06-20') THEN "jaro"
-		WHEN base.`date` < '2020-09-22' THEN "léto"
-		WHEN base.`date` < '2020-12-21' THEN "podzim"
-		END AS "roèní období",
-	-- ve výsledné tabulce jsem ještì místo celkového HDP dopoèítala HDP na obyvatele 
+		WHEN base.`date` < '2020-03-20' OR (base.`date` BETWEEN '2020-12-21' AND '2021-03-19') THEN "3"		-- zima
+		WHEN base.`date` < '2020-06-20' OR (base.`date` BETWEEN '2021-03-20' AND '2021-06-20') THEN "0"		-- jaro
+		WHEN base.`date` < '2020-09-22' THEN "1"		-- léto
+		WHEN base.`date` < '2020-12-21' THEN "2"		-- podzim
+		END AS "roèní_období",
+	-- Dopoèítání HDP na obyvatele 
 	ROUND(v.HDP/base.population) AS "HDP_na_obyvatele",		
 	v.gini_koeficient,
 	v.`dìtská_úmrtnost`,
 	v.`hustota_zalidnìní`,
 	v.`medián_vìku_2018`,
-	-- ve výsledné tabulce jsem ještì dopoèítala podíl pøíslušníkù jednotlivých náboženství na celkové populaci zemì
+	-- Dopoèítání podílu pøíslušníkù jednotlivých náboženství na celkové populaci zemì
 	CONCAT(ROUND(v.`køesanství`/base.population * 100,1), ' %') AS "podíl_køesanù",
 	CONCAT(ROUND(v.`islám`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_islámu",
 	CONCAT(ROUND(v.`hinduismus`/base.population * 100,1), ' %') AS "podíl_hinduistù",
@@ -235,26 +242,24 @@ LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v
 ;
 
 -- zkouška
-SELECT * FROM v_joined_cov_lt_tests_eco_co_rel WHERE ISO = 'USA' AND datum BETWEEN '2020-09-20' AND '2020-12-20';
+SELECT * FROM v_joined_cov_lt_tests_eco_co_rel WHERE zemì IN ('Australia', 'Canada', 'China') AND datum BETWEEN '2020-09-20' AND '2020-12-20';
 
 
 
--- 5. Spojení tabulek: napojení údajù z tabulky weather
-
-/* a) Udìlám potøebné výpoèty pro požadované údaje z tabulky weather ve sloupcích s teplotou, vìtrem a deštìm.
- 	  Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city). 
-      Pøes tento sloupec rovnou tabulky weather a countries spojím, abych k údajùm o poèasí získala ISO z tabulky countries a mohla pak údaje o poèasí
-      pøipojit k velké výsledné tabulce. Výslednou tabulku uložím do VIEW v_weather_new */  
-
+-- 5. Spojení tabulek:
+-- a) napojení údajù z tabulky weather  - uloženo jako v_weather_new 
+    
 CREATE OR REPLACE VIEW v_weather_new AS
 WITH 
 weather_new AS
 (
 	SELECT		
 		CAST(`date` AS date) AS datum,
+		-- Udìlám potøebné výpoèty pro požadované údaje z tabulky weather ve sloupcích s teplotou, vìtrem a deštìm.
 		CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
 		SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
 		MAX(gust) AS "max_vítr_v_nárazech",
+		-- Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city).
 		CASE 
 			WHEN city = 'Athens' THEN 'Athenai'
 			WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
@@ -271,6 +276,7 @@ weather_new AS
 	FROM weather
 	GROUP BY capital_city, `date`
 )
+-- Spojím tabulky weather_new a countries, tak k údajùm o poèasí získám ISO z tabulky countries.   
 SELECT 
 	c.iso3 AS ISO,
 	w.*
@@ -284,7 +290,7 @@ JOIN weather_new w		-- Brno a Stornoway nejsou v tabulce countries, takže jejich
 SELECT * FROM v_weather_new WHERE capital_city = 'Prague';
 
 
--- b) Údaje z tabulky v_weather_new pøipojím pøes LEFT JOIN k velké tabulce a uložím do VIEW v_joined_cov_lt_tests_eco_co_rel_w
+-- b) Pøipojení tabulky v_weather_new k výsledné tabulce  - uloženo jako v_joined_cov_lt_tests_eco_co_rel_w
 CREATE OR REPLACE VIEW v_joined_cov_lt_tests_eco_co_rel_w AS
 WITH 
 weather_new AS
@@ -353,10 +359,33 @@ pivoted_life_expectancy AS
     FROM life_expectancy
     GROUP BY iso3
 )
--- pøipojení tabulky k velké výsledné tabulce
+-- pøipojení tabulky k velké výsledné tabulce a uspoøádání sloupcù podle zadání
 SELECT
-    base.*,
-    ROUND(le.life_expectancy_2015 - le.life_expectancy_1965,1) AS "rozdíl_dožití_2015_1965"
+    base.datum,
+	base.zemì,
+-- 	base.ISO,
+	base.`denní_nárust_nakažených`,
+	base.`denní_testy`,
+	base.`poèet_obyvatel`,
+	base.víkend,
+	base.`roèní_období`,
+	base.`hustota_zalidnìní`,
+	base.`HDP_na_obyvatele`,		
+	base.gini_koeficient,
+	base.`dìtská_úmrtnost`,
+	base.`medián_vìku_2018`,
+	base.`podíl_køesanù`,
+	base.`podíl_pøíslušníkù_islámu`,
+	base.`podíl_hinduistù`,
+	base.`podíl_budhistù`,
+	base.`podíl_židù`,
+	base.`podíl_pøíslušníkù_nepøidruž._náb.`,
+	base.`podíl_pøíslušníkù_lid._náb.`,
+	base.`podíl_pøíslušníkù_jiných_náb.`,	
+    ROUND(le.life_expectancy_2015 - le.life_expectancy_1965,1) AS "rozdíl_dožití_2015_1965",
+	base.`prùm._denní_teplota`,	
+	base.`poèet_hod._se_srážkami`,
+	base.`max_vítr_v_nárazech`
 FROM v_joined_cov_lt_tests_eco_co_rel_w base
 LEFT JOIN pivoted_life_expectancy le
   ON base.ISO = le.iso3
@@ -366,4 +395,19 @@ LEFT JOIN pivoted_life_expectancy le
 -- zkouška
 SELECT * 
 FROM v_Petra_Rohlickova_projekt_SQL_final 
-WHERE zemì IN ('US', 'Czechia') AND datum BETWEEN '2020-09-20' AND '2020-12-20';
+WHERE zemì IN ('Greece', 'US') AND datum BETWEEN '2020-06-20' AND '2020-12-20';
+
+
+
+-- 7. Vytvoøení finální výsledné tabulky
+
+CREATE TABLE t_Petra_Rohlickova_projekt_SQL_final AS
+SELECT *
+FROM v_Petra_Rohlickova_projekt_SQL_final;
+
+
+-- zkouška
+SELECT *
+FROM t_petra_rohlickova_projekt_sql_final
+-- WHERE datum BETWEEN '2020-09-20' AND '2021-02-20'
+ORDER BY zemì, datum;
