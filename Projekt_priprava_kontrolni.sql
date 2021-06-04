@@ -2,18 +2,34 @@
 
 CREATE OR REPLACE VIEW v_joined_cov_lt_eco_co_rel AS
 WITH 
--- Spojím coivd19_basic s lookup_table, tím získám k datùm z covid19_basic iso3
+covid_Australia_Canada_China AS
+(
+	SELECT		
+		`date`,
+		country,
+		SUM(confirmed) AS confirmed,
+		SUM(deaths) AS deaths,
+		SUM(recovered) AS recovered 
+	FROM covid19_detail_global_differences 
+	WHERE country IN ('Australia', 'Canada', 'China') 
+	GROUP BY country, `date`
+	UNION 
+	SELECT 
+		*
+	FROM covid19_basic_differences
+),
+-- Spojím covid_Australia_Canada_China (tj. rozšíøenou tabulku covid19_basic_differences) s lookup_table, tím získám k datùm o confirmed také iso3
 joined_covid_lookup AS	
 (
 	SELECT
-		cbd.`date`,
-		cbd.country,
+		cacc.`date`,
+		cacc.country,
 		lt.iso3,
-		cbd.confirmed,
+		cacc.confirmed,
 		lt.population
-	FROM covid19_basic_differences cbd
+	FROM covid_Australia_Canada_China cacc
 LEFT JOIN lookup_table lt 
-  	  ON cbd.country = lt.country
+  	  ON cacc.country = lt.country
   	 AND lt.province IS NULL
 )
 -- Spojím dvì novì vytvoøené tabulky dohromady
@@ -55,11 +71,26 @@ LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v
 	ON base.iso3 = v.ISO
 ;
 
--- kontrola velikosti tabulky v_joined_cov_lt_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	OK (88 452)
+
+
+-- kontrola velikosti tabulky v_joined_cov_lt_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	- OK (pùvodnì 88 452, po pøidání Austrálie, Èíny a Kanady 89 798)
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
 	COUNT(*) AS "Poèet_øádkù"
-FROM covid19_basic_differences
+FROM (
+SELECT		
+		`date`,
+		country,
+		SUM(confirmed) AS confirmed,
+		SUM(deaths) AS deaths,
+		SUM(recovered) AS recovered 
+	FROM covid19_detail_global_differences 
+	WHERE country IN ('Australia', 'Canada', 'China') 
+	GROUP BY country, `date`
+	UNION 
+	SELECT 
+		*
+	FROM covid19_basic_differences) tabulka
 UNION
 SELECT 
 	"joined_table" AS "Tabulka",
@@ -67,17 +98,32 @@ SELECT
 FROM v_joined_cov_lt_eco_co_rel;
 
 
--- kontrola velikosti tabulky v_joined_co_lt_tests_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	NE OK (89 874!!!)
+
+-- kontrola velikosti tabulky v_joined_co_lt_tests_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	- pùvodnì vyšlo 89 874 místo 88 452 (bez Austrálie, Èíny a Kanady)
 -- - po pøipojení covid19_tests došlo k navýšení poètu øádkù
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
 	COUNT(*) AS "Poèet_øádkù"
-FROM covid19_basic_differences
+FROM (
+	SELECT		
+			`date`,
+			country,
+			SUM(confirmed) AS confirmed,
+			SUM(deaths) AS deaths,
+			SUM(recovered) AS recovered 
+		FROM covid19_detail_global_differences 
+		WHERE country IN ('Australia', 'Canada', 'China') 
+		GROUP BY country, `date`
+		UNION 
+		SELECT 
+			*
+		FROM covid19_basic_differences) tabulka
 UNION
 SELECT 
 	"joined_table" AS "Tabulka",
 	COUNT (*) AS "Poèet_øádkù"
 FROM v_joined_cov_lt_tests_eco_co_rel;
+
 
 
 -- kontrola potenciálnì problematických zemí - problém ve sloupci entity v tabulce covid19_tests
@@ -137,7 +183,7 @@ FROM v_covid19_tests_new
 WHERE country = 'Singapore';
 
 
--- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel 			OK (88 452)
+-- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel 			OK (pùvodnì 88 452, novì po pøidání Austrálie, Èíny a Kanady 89 798)
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
 	COUNT(*) AS "Poèet_øádkù"
@@ -149,5 +195,22 @@ SELECT
 FROM v_joined_cov_lt_tests_eco_co_rel;	
 
 
--- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel_w		OK (88 452)
+-- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel_w		OK (pùvodnì 88 452, novì po pøidání Austrálie, Èíny a Kanady 89 798)
 SELECT COUNT(*) FROM v_joined_cov_lt_tests_eco_co_rel_w;			
+
+
+SELECT 
+	COUNT(*)
+FROM (
+	SELECT
+		`date`,
+		country,
+		SUM(confirmed) AS confirmed,
+		SUM(deaths) AS deaths,
+		SUM(recovered) AS recovered 
+	FROM covid19_detail_global_differences 
+	WHERE country IN ('Australia', 'Canada', 'China') 
+	GROUP BY country, `date`) tabulka;
+
+
+
