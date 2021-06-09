@@ -199,7 +199,8 @@ FROM v_joined_cov_lt_tests_eco_co_rel;
 SELECT COUNT(*) FROM v_joined_cov_lt_tests_eco_co_rel_w;			
 
 
-SELECT 
+-- kontrola poètu øádkù po pøidání Austrálie, Èíny, Kanady
+SELECT			-- OK (1 346 + 88 452 = 89 798) 
 	COUNT(*)
 FROM (
 	SELECT
@@ -211,6 +212,3 @@ FROM (
 	FROM covid19_detail_global_differences 
 	WHERE country IN ('Australia', 'Canada', 'China') 
 	GROUP BY country, `date`) tabulka;
-
-
-
