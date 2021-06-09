@@ -12,7 +12,10 @@ SELECT * FROM weather;		-- date, time, temp, gust, rain
 SELECT * FROM lookup_table;		-- country, iso3, population
 
 
--- 2. Øešení "issues" v datech èi tabulkách
+
+  /***********************************************/
+ /*  2. Øešení "issues" v datech èi tabulkách   */
+/***********************************************/
 
 /* GDP, gini koeficient a mortality under 5:
    Hodnoty ukazatelù jsem vzala v každé zemi nejaktuálnìjší, které jsou k dispozici, tj. našla jsem poslední rok (MAX(year)), ve kterém byly tyto ukazatele NOT NULL */
@@ -149,7 +152,7 @@ LEFT JOIN pivoted_religions r
 	ON base.zemì = r.country
 ;
 
--- kontrola
+-- zkouška
 SELECT * FROM v_joined_eco_co_rel;
 
 
@@ -246,7 +249,10 @@ SELECT * FROM v_joined_cov_lt_tests_eco_co_rel WHERE zemì IN ('Australia', 'Cana
 
 
 
--- 5. Spojení tabulek:
+
+  /************************/
+ /*  5. Tabulka weather  */
+/************************/
 -- a) napojení údajù z tabulky weather  - uloženo jako v_weather_new 
     
 CREATE OR REPLACE VIEW v_weather_new AS
@@ -286,7 +292,7 @@ JOIN weather_new w		-- Brno a Stornoway nejsou v tabulce countries, takže jejich
 	AND c.iso3 IS NOT NULL 
 ;
 
--- kontrola
+-- zkouška
 SELECT * FROM v_weather_new WHERE capital_city = 'Prague';
 
 
@@ -299,7 +305,7 @@ weather_new AS
 		CAST(`date` AS date) AS datum,
 		CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
 		SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
-		MAX(gust) AS "max_vítr_v_nárazech",
+		CONCAT(MAX(CAST(REPLACE(gust,' km/h', '') AS INT)), ' km/h') AS "max_vítr_v_nárazech",
 		CASE 
 			WHEN city = 'Athens' THEN 'Athenai'
 			WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
@@ -345,7 +351,9 @@ ORDER BY datum;
 
 
 
--- 6. Pivotování a výpoèty v tabulce life_expectancy
+  /*********************************/
+ /*  6. Tabulka life_expectancy   */ 
+/*********************************/
 
 CREATE OR REPLACE VIEW v_Petra_Rohlickova_projekt_SQL_final AS
 WITH
@@ -392,22 +400,29 @@ LEFT JOIN pivoted_life_expectancy le
 ;
 
 
--- zkouška
-SELECT * 
-FROM v_Petra_Rohlickova_projekt_SQL_final 
-WHERE zemì IN ('Greece', 'US') AND datum BETWEEN '2020-06-20' AND '2020-12-20';
+-- zkouška 
+SELECT * FROM v_petra_rohlickova_projekt_sql_final WHERE zemì IN ('Australia', 'Czechia', 'US') ORDER BY zemì, datum;
 
 
 
--- 7. Vytvoøení finální výsledné tabulky
+
+  /*************************/
+ /*  7. Finální tabulka   */
+/*************************/ 
+
+-- Vytvoøení finální výsledné tabulky (trvalo to 135 minut, resp. podruhé 282 minut !!!)
 
 CREATE TABLE t_Petra_Rohlickova_projekt_SQL_final AS
 SELECT *
-FROM v_Petra_Rohlickova_projekt_SQL_final;
+FROM v_Petra_Rohlickova_projekt_SQL_final
+ORDER BY zemì, datum DESC;
 
 
--- zkouška
-SELECT *
-FROM t_petra_rohlickova_projekt_sql_final
--- WHERE datum BETWEEN '2020-09-20' AND '2021-02-20'
-ORDER BY zemì, datum;
+SELECT * FROM t_petra_rohlickova_projekt_sql_final ORDER BY datum;
+
+
+SELECT DISTINCT `date` FROM covid19_tests ORDER BY `date`;   -- data od 1. 1. 2020 do 24. 11. 2020
+SELECT DISTINCT `date` FROM weather ORDER BY `date`;		 -- data od 1. 5. 2016  do 30. 4. 2021
+SELECT * FROM covid19_basic_differences WHERE country = 'Korea, South';  	-- Itálie od 21.2., Jižní Korea od 20.2.
+SELECT * FROM covid19_basic_differences WHERE `date` > '2020-06-20';
+
