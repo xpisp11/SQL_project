@@ -47,7 +47,7 @@ FROM covid19_tests
 WHERE country NOT IN ('France', 'India', 'Italy', 'Japan', 'Poland', 'Singapore', 'United States')
 ;
 
-SELECT * FROM v_covid19_tests_new; 
+SELECT * FROM v_covid19_tests_new WHERE country = 'Afghanistan'; 
 
   /*********************/
  /*  life_expectancy  */
@@ -74,7 +74,7 @@ pivoted_life_expectancy AS
 SELECT
     base.*,
     ROUND(le.life_expectancy_2015 - le.life_expectancy_1965,1) AS "rozdíl_dožití_2015_1965"
-FROM v_joined_covid_lookup_tests_economies_countries_weather base
+FROM v_joined_cov_lt_tests_eco_co_rel_w base
 LEFT JOIN pivoted_life_expectancy le
   ON base.ISO = le.iso3
 WHERE base.ISO = 'CZE'
@@ -93,9 +93,8 @@ SELECT * FROM religions WHERE `year` = '2020' AND country <> 'All Countries';
 
 SELECT DISTINCT country FROM religions WHERE country <> 'All Countries' ORDER BY country;
 
-/* Názvy jsou stejné jako v tabulká economies a countries, takže tabulku religion nejprve pøipojím k v_joined_economies_countries, abych následnì
-     a vytvoøím nové VIEW
-   v_joined_economies_countries_religion */
+/* Názvy jsou stejné jako v tabulká economies a countries, takže tabulku religion nejprve pøipojím k v_joined_economies_countries
+   a vytvoøím nové VIEW v_joined_eco_co_rel, se kterým dále pracuju */
 
 WITH
 religion AS
@@ -118,4 +117,4 @@ LEFT JOIN religion r
 ON base.zemì = r.country
 ;
 
-SELECT * FROM v_joined_economies_countries vjec 
+SELECT * FROM v_joined_economies_countries 
