@@ -142,6 +142,48 @@ SELECT DISTINCT country FROM religions WHERE country <> 'All Countries' ORDER BY
 
 
 
+  /*******************************/
+ /*  Výpoèty v tabulce weather  */
+/*******************************/
+
+SELECT DISTINCT city FROM weather ORDER BY city;
+SELECT DISTINCT capital_city FROM countries ORDER BY capital_city;
+
+-- - Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city).
+-- -- Udìlám výpoèty ve sloupcích s teplotou, vìtrem a deštìm 
+ 
+SELECT		-- použiju ve WITH jako weather_new
+	CAST(`date`AS date) AS datum,
+	-- prùmìrná denní (nikoli noèní!) teplota
+	-- odstranila jsem " °c", vypoèítala prùmìr pouze z teplot pro èasy z daného intervalu a zase pøipojila " °c"
+	CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
+	-- poèet hodin v daném dni, kdy byly srážky nenulové
+	SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
+	-- maximální síla vìtru v nárazech bìhem dne
+	CONCAT(MAX(CAST(REPLACE(gust,' km/h', '') AS INT)), ' km/h') AS "max_vítr_v_nárazech",
+	CASE 
+		WHEN city = 'Athens' THEN 'Athenai'
+		WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
+		WHEN city = 'Bucharest' THEN 'Bucuresti'
+		WHEN city = 'Helsinki' THEN 'Helsinki [Helsingfors]'
+		WHEN city = 'Kiev' THEN 'Kyiv'
+		WHEN city = 'Lisbon' THEN 'Lisboa'
+		WHEN city = 'Luxembourg' THEN 'Luxembourg [Luxemburg/L'
+		WHEN city = 'Rome' THEN 'Roma'
+		WHEN city = 'Vienna' THEN 'Wien'
+		WHEN city = 'Warsaw' THEN 'Warszawa'
+		ELSE city
+	END AS "capital_city"
+FROM weather
+GROUP BY capital_city, `date`
+;
+
+-- kontrola
+SELECT `date`, `time`, temp, gust, rain FROM weather WHERE city = 'Prague';
+
+
+
+
   /********************************/
  /*  Pivotování life_expectancy  */
 /********************************/
@@ -171,44 +213,4 @@ FROM v_joined_cov_lt_tests_eco_co_rel_w base
 LEFT JOIN pivoted_life_expectancy le
   ON base.ISO = le.iso3
 
-
-
-  /*******************************/
- /*  Výpoèty v tabulce weather  */
-/*******************************/
-
-SELECT DISTINCT city FROM weather ORDER BY city;
-SELECT DISTINCT capital_city FROM countries ORDER BY capital_city;
-
--- - Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city).
--- -- Udìlám výpoèty ve sloupcích s teplotou, vìtrem a deštìm 
- 
-SELECT		-- použiju ve WITH jako weather_new
-	CAST(`date`AS date) AS datum,
-	-- prùmìrná denní (nikoli noèní!) teplota
-	-- odstranila jsem " °c", vypoèítala prùmìr pouze z teplot pro èasy z daného intervalu a zase pøipojila " °c"
-	CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
-	-- poèet hodin v daném dni, kdy byly srážky nenulové
-	SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
-	-- maximální síla vìtru v nárazech bìhem dne
-	MAX(gust) AS "max_vítr_v_nárazech",
-	CASE 
-		WHEN city = 'Athens' THEN 'Athenai'
-		WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
-		WHEN city = 'Bucharest' THEN 'Bucuresti'
-		WHEN city = 'Helsinki' THEN 'Helsinki [Helsingfors]'
-		WHEN city = 'Kiev' THEN 'Kyiv'
-		WHEN city = 'Lisbon' THEN 'Lisboa'
-		WHEN city = 'Luxembourg' THEN 'Luxembourg [Luxemburg/L'
-		WHEN city = 'Rome' THEN 'Roma'
-		WHEN city = 'Vienna' THEN 'Wien'
-		WHEN city = 'Warsaw' THEN 'Warszawa'
-		ELSE city
-	END AS "capital_city"
-FROM weather
-GROUP BY capital_city, `date`
-;
-
--- kontrola
-SELECT `date`, `time`, temp, gust, rain FROM weather WHERE city = 'Prague';
 
