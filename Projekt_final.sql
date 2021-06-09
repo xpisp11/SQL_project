@@ -237,9 +237,8 @@ LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v
   /************************/
  /*  5. Tabulka weather  */
 /************************/
--- a) napojení údajù z tabulky weather  - uloženo jako v_weather_new 
-    
-CREATE OR REPLACE VIEW v_weather_new AS
+-- Napojení údajù z tabulky weather k výsledné tabulce  - uloženo jako v_joined_cov_lt_tests_eco_co_rel_w
+CREATE OR REPLACE VIEW v_joined_cov_lt_tests_eco_co_rel_w AS
 WITH 
 weather_new AS
 (
@@ -248,47 +247,8 @@ weather_new AS
 		-- Udìlám potøebné výpoèty pro požadované údaje z tabulky weather ve sloupcích s teplotou, vìtrem a deštìm.
 		CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
 		SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
-		MAX(gust) AS "max_vítr_v_nárazech",
-		-- Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city).
-		CASE 
-			WHEN city = 'Athens' THEN 'Athenai'
-			WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
-			WHEN city = 'Bucharest' THEN 'Bucuresti'
-			WHEN city = 'Helsinki' THEN 'Helsinki [Helsingfors]'
-			WHEN city = 'Kiev' THEN 'Kyiv'
-			WHEN city = 'Lisbon' THEN 'Lisboa'
-			WHEN city = 'Luxembourg' THEN 'Luxembourg [Luxemburg/L'
-			WHEN city = 'Rome' THEN 'Roma'
-			WHEN city = 'Vienna' THEN 'Wien'
-			WHEN city = 'Warsaw' THEN 'Warszawa'
-			ELSE city
-		END AS "capital_city"
-	FROM weather
-	GROUP BY capital_city, `date`
-)
--- Spojím tabulky weather_new a countries, tak k údajùm o poèasí získám ISO z tabulky countries.   
-SELECT 
-	c.iso3 AS ISO,
-	w.*
-FROM countries c 
-JOIN weather_new w		-- Brno a Stornoway nejsou v tabulce countries, takže jejich ISO je NULL a ve výsledné tabulce je nepotøebuju, proto INNER JOIN.
-	 ON c.capital_city = w.capital_city
-	AND c.iso3 IS NOT NULL 
-;
-
-
-
-
--- b) Pøipojení tabulky v_weather_new k výsledné tabulce  - uloženo jako v_joined_cov_lt_tests_eco_co_rel_w
-CREATE OR REPLACE VIEW v_joined_cov_lt_tests_eco_co_rel_w AS
-WITH 
-weather_new AS
-(
-	SELECT		
-		CAST(`date` AS date) AS datum,
-		CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
-		SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
 		CONCAT(MAX(CAST(REPLACE(gust,' km/h', '') AS INT)), ' km/h') AS "max_vítr_v_nárazech",
+		-- Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city).
 		CASE 
 			WHEN city = 'Athens' THEN 'Athenai'
 			WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
