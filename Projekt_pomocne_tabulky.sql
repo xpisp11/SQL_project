@@ -75,7 +75,7 @@ SELECT * FROM v_covid19_tests_new WHERE country = 'United States';
 
 
   
-/****************************************/
+  /****************************************/
  /*  Výpoèty pro tvorbu dalších sloupcù  */
 /****************************************/
   
@@ -107,6 +107,17 @@ FROM v_joined_covid_lookup_tests_economies_countries
 SELECT * FROM religions WHERE `year` = '2020' AND country <> 'All Countries';
 
 
+-- Chyba v datech u Afghanistánu (v roce 2020 má být Other Religions 30,000)
+SELECT * FROM religions WHERE country = 'Afghanistan' AND religion IN ('Folk Religions', 'Other Religions');
+-- Opravím pøímo v tabulce:
+UPDATE religions 
+SET religion = 'Other Religions'
+WHERE 1=1
+	AND `year` = 2020
+	AND country = 'Afghanistan'
+	AND population = 30000;
+
+
 -- Protože chci údaje ke každé zemi mít pouze na jednom øádku, pøetransponuju si øádky s jednotlivými náboženstvími na sloupce.
 SELECT DISTINCT religion FROM religions;
 
@@ -119,7 +130,7 @@ SELECT 		-- použiju ve WITH jako pivoted_religions pro pøipojení k tabulce joine
    MAX(CASE WHEN religion = 'Judaism' THEN population END) AS "judaismus",
    MAX(CASE WHEN religion = 'Unaffiliated Religions' THEN population END) AS "nepøidružená_náboženství",
    MAX(CASE WHEN religion = 'Folk Religions' THEN population END) AS "lidová_náboženství",
-   MAX(CASE WHEN religion = 'Other Religions' THEN population END) AS "jiná náboženství"
+   MAX(CASE WHEN religion = 'Other Religions' THEN population END) AS "jiná_náboženství"
 FROM religions
 WHERE 1=1
 	AND `year` = '2020' 
@@ -137,7 +148,7 @@ SELECT DISTINCT country FROM religions WHERE country <> 'All Countries' ORDER BY
 
 
 /* Názvy jsou stejné jako v tabulká economies a countries, takže tabulku religion nejprve spojím s joined_economies_countries
-   a vytvoøím nové VIEW v_joined_eco_co_rel, se kterým dále pracuju (viz. Projekt_priprava.sql) */
+   a vytvoøím nové VIEW v_joined_eco_co_rel, se kterým dále pracuju (viz. Projekt_final.sql) */
 
 
 

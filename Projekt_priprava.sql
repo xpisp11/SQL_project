@@ -63,6 +63,17 @@ SELECT DISTINCT country FROM religions;
 /******************************/ 	  
 
 -- a) Propojení tabulek economies, countries, religions - uloženo jako v_joined_eco_co_rel  
+
+-- Oprava chybných dat v tabulce religions u Afghánistánu:
+UPDATE religions 
+SET religion = 'Other Religions'
+WHERE 1=1
+	AND `year` = 2020
+	AND country = 'Afghanistan'
+	AND population = 30000;
+
+
+-- Postupné spojení všech 3 tabulek:
 CREATE OR REPLACE VIEW v_joined_eco_co_rel AS
 WITH
 -- Napøed pøipravím 3 tabulky s aktuálními hodnotami GDP, gini a mortality_under5: 
@@ -136,7 +147,7 @@ pivoted_religions AS
   		MAX(CASE WHEN religion = 'Judaism' THEN population END) AS "judaismus",
    		MAX(CASE WHEN religion = 'Unaffiliated Religions' THEN population END) AS "nepøidružená_náboženství",
  		MAX(CASE WHEN religion = 'Folk Religions' THEN population END) AS "lidová_náboženství",
-		MAX(CASE WHEN religion = 'Other Religions' THEN population END) AS "jiná náboženství"
+		MAX(CASE WHEN religion = 'Other Religions' THEN population END) AS "jiná_náboženství"
 	FROM religions
 	WHERE 1=1
 		AND `year` = '2020' 
@@ -154,7 +165,6 @@ LEFT JOIN pivoted_religions r
 
 -- zkouška
 SELECT * FROM v_joined_eco_co_rel;
-
 
 
 -- b) Propojení covid19_basic_diff s lookup a covid19_tests - uloženo jako v_joined_cov_lt_tests_eco_co_rel  
@@ -247,7 +257,15 @@ LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v
 -- zkouška
 SELECT * FROM v_joined_cov_lt_tests_eco_co_rel WHERE zemì IN ('Australia', 'Canada', 'China') AND datum BETWEEN '2020-09-20' AND '2020-12-20';
 
+SELECT * FROM v_joined_cov_lt_tests_eco_co_rel WHERE zemì = 'Afghanistan';
 
+-- oprava chybných dat v tabulce religions u Afghánistánu:
+UPDATE religions 
+SET religion = 'Other Religions'
+WHERE 1=1
+	AND `year` = 2020
+	AND country = 'Afghanistan'
+	AND population = 30000;
 
 
   /************************/
@@ -264,7 +282,7 @@ weather_new AS
 		-- Udìlám potøebné výpoèty pro požadované údaje z tabulky weather ve sloupcích s teplotou, vìtrem a deštìm.
 		CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
 		SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
-		MAX(gust) AS "max_vítr_v_nárazech",
+		CONCAT(MAX(CAST(REPLACE(gust,' km/h', '') AS INT)), ' km/h') AS "max_vítr_v_nárazech",
 		-- Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city).
 		CASE 
 			WHEN city = 'Athens' THEN 'Athenai'
@@ -298,49 +316,15 @@ SELECT * FROM v_weather_new WHERE capital_city = 'Prague';
 
 -- b) Pøipojení tabulky v_weather_new k výsledné tabulce  - uloženo jako v_joined_cov_lt_tests_eco_co_rel_w
 CREATE OR REPLACE VIEW v_joined_cov_lt_tests_eco_co_rel_w AS
-WITH 
-weather_new AS
-(
-	SELECT		
-		CAST(`date` AS date) AS datum,
-		CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
-		SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srážkami",
-		CONCAT(MAX(CAST(REPLACE(gust,' km/h', '') AS INT)), ' km/h') AS "max_vítr_v_nárazech",
-		CASE 
-			WHEN city = 'Athens' THEN 'Athenai'
-			WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
-			WHEN city = 'Bucharest' THEN 'Bucuresti'
-			WHEN city = 'Helsinki' THEN 'Helsinki [Helsingfors]'
-			WHEN city = 'Kiev' THEN 'Kyiv'
-			WHEN city = 'Lisbon' THEN 'Lisboa'
-			WHEN city = 'Luxembourg' THEN 'Luxembourg [Luxemburg/L'
-			WHEN city = 'Rome' THEN 'Roma'
-			WHEN city = 'Vienna' THEN 'Wien'
-			WHEN city = 'Warsaw' THEN 'Warszawa'
-			ELSE city
-		END AS "capital_city"
-	FROM weather
-	GROUP BY capital_city, `date`
-),
-joined_weather_countries AS
-(
-	SELECT 
-		c.iso3 AS ISO,
-		w.*
-	FROM countries c 
-	JOIN weather_new w		-- Brno a Stornoway nejsou v tabulce countries, takže jejich ISO je NULL a ve výsledné tabulce je nepotøebuju, proto INNER JOIN.
-		 ON c.capital_city = w.capital_city
-		AND c.iso3 IS NOT NULL 
-)
 SELECT
 	base.*,
-	wc.`prùm._denní_teplota`,
- 	wc.`poèet_hod._se_srážkami`,
- 	wc.`max_vítr_v_nárazech`
+	wn.`prùm._denní_teplota`,
+ 	wn.`poèet_hod._se_srážkami`,
+ 	wn.`max_vítr_v_nárazech`
 FROM v_joined_cov_lt_tests_eco_co_rel base 
-LEFT JOIN joined_weather_countries wc 
-	ON base.ISO = wc.ISO
-   AND base.datum = wc.datum
+LEFT JOIN v_weather_new wn 
+	ON base.ISO = wn.ISO
+   AND base.datum = wn.datum
 ;
 
 -- zkouška
@@ -403,6 +387,7 @@ LEFT JOIN pivoted_life_expectancy le
 -- zkouška 
 SELECT * FROM v_petra_rohlickova_projekt_sql_final WHERE zemì IN ('Australia', 'Czechia', 'US') ORDER BY zemì, datum;
 
+SELECT * FROM v_petra_rohlickova_projekt_sql_final WHERE zemì = 'Afghanistan';
 
 
 
@@ -419,10 +404,4 @@ ORDER BY zemì, datum DESC;
 
 
 SELECT * FROM t_petra_rohlickova_projekt_sql_final ORDER BY datum;
-
-
-SELECT DISTINCT `date` FROM covid19_tests ORDER BY `date`;   -- data od 1. 1. 2020 do 24. 11. 2020
-SELECT DISTINCT `date` FROM weather ORDER BY `date`;		 -- data od 1. 5. 2016  do 30. 4. 2021
-SELECT * FROM covid19_basic_differences WHERE country = 'Korea, South';  	-- Itálie od 21.2., Jižní Korea od 20.2.
-SELECT * FROM covid19_basic_differences WHERE `date` > '2020-06-20';
 
