@@ -13,6 +13,7 @@ SELECT * FROM lookup_table;		-- country, iso3, population
 
 
 
+
   /***********************************************/
  /*  2. Øešení "issues" v datech èi tabulkách   */
 /***********************************************/
@@ -55,6 +56,7 @@ SELECT DISTINCT country FROM lookup_table;
 SELECT DISTINCT country FROM covid19_basic_differences;
 SELECT DISTINCT country FROM covid19_tests;
 SELECT DISTINCT country FROM religions;
+
 
 
 
@@ -268,6 +270,8 @@ WHERE 1=1
 	AND population = 30000;
 
 
+
+
   /************************/
  /*  5. Tabulka weather  */
 /************************/
@@ -335,6 +339,7 @@ ORDER BY datum;
 
 
 
+
   /*********************************/
  /*  6. Tabulka life_expectancy   */ 
 /*********************************/
@@ -388,6 +393,7 @@ LEFT JOIN pivoted_life_expectancy le
 SELECT * FROM v_petra_rohlickova_projekt_sql_final WHERE zemì IN ('Australia', 'Czechia', 'US') ORDER BY zemì, datum;
 
 SELECT * FROM v_petra_rohlickova_projekt_sql_final WHERE zemì = 'Afghanistan';
+
 
 
 
