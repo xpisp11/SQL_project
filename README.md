@@ -21,8 +21,8 @@ Souèástí repozitáøe jsou také následující soubory, z nichž klíèové jsou pouze pr
 
  - Projekt_final_vypis_tabulky.sql - script pro vypsání výsledné tabulky
  - Projekt_pruvodka.docx - detailní popis postupu v rámci celého projektu
- - Projekt_pomocne_tabulky.xlsx - tabulky v excelu sloužící pro rychlou kontrolu názvu zemí a mìst v rùzných tabulkách a pro kontrolu výpoètù v rámci tabulky weather
- - Projekt_pomocne_tabulky.sql - novì vytvoøené tabulky, které byly následnì použity v souboru Projekt_final.sql
  - Projekt_priprava.sql - detailnìji popsané pøípravné kroky (èíslování "kapitol" navázáno na kapitoly v dokumentu Projekt_pruvodka.docx)
  - Projekt_priprava_kontrolni.sql - dotazy pro kontrolu správnosti napojení tabulek apod.
+ - Projekt_pomocne_tabulky.xlsx - tabulky v excelu sloužící pro rychlou kontrolu názvu zemí a mìst v rùzných tabulkách a pro kontrolu výpoètù v rámci tabulky weather
+ - Projekt_pomocne_tabulky.sql - novì vytvoøené tabulky, které byly následnì použity v souboru Projekt_final.sql
 
