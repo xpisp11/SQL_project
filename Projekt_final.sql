@@ -101,6 +101,8 @@ LEFT JOIN pivoted_religions r
 
 
 
+
+
 /* Propojení covid19_basic_differences s lookup_table a covid19_tests - uloženo jako v_joined_cov_lt_tests_eco_co_rel  */
 
 -- Vytvoøení tabulky covid19_test_new uložené ve VIEW:
@@ -153,10 +155,75 @@ WHERE country NOT IN ('France', 'India', 'Italy', 'Japan', 'Poland', 'Singapore'
 ;
 
 
--- Spojení tabulek covid19_basic_differences s lookup_table a covid19_tests_new
+
+-- Spojení tabulek covid19_basic_differences s lookup_table a covid19_tests_new a následné spojení s v_joined_eco_co_rel
 CREATE OR REPLACE VIEW v_joined_cov_lt_tests_eco_co_rel AS
 WITH 
--- Pøipojení záznamù pro Austrálii, Èínu a Kanadu z covid19_detail_global_differences k tabulce covid19_basic_differences: 
+-- Vytvoøení nové tabulky pro Èínu z covid19_detail_global_differences
+China_confirmed AS
+(	
+	SELECT 
+		`date`,
+		country, 
+		sum(confirmed) AS confirmed
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_deaths AS
+(
+	SELECT 
+		`date`,
+		country, 
+		sum(deaths) AS deaths
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_recovered AS
+(
+	SELECT 
+		`date`,
+		country, 
+		sum(recovered) AS recovered
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_joined AS
+(	
+	SELECT
+		c.`date`,
+		c.country,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN c.confirmed END), 0) AS Mainland_China_confirmed,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN c.confirmed END), 0) AS China_confirmed,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN d.deaths END), 0) AS Mainland_China_deaths,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN d.deaths END), 0) AS China_deaths,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN r.recovered END), 0) AS Mainland_China_recovered,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN r.recovered END), 0) AS China_recovered
+	FROM China_confirmed c
+	LEFT JOIN China_deaths d
+		 ON c.`date` = d.`date`
+		AND c.country = d.country
+	LEFT JOIN China_recovered r 
+		 ON d.`date` = r.`date`
+		AND d.country = r.country
+	GROUP BY c.`date`, c.country
+),
+China_final AS
+(
+	SELECT
+		`date`,
+		'China' AS country,
+		(Mainland_China_confirmed + China_confirmed) AS confirmed,
+		(Mainland_China_deaths + China_deaths) AS deaths,
+		(Mainland_China_recovered + China_recovered) AS recovered
+	FROM China_joined
+),
+-- Pøipojení záznamù pro Austrálii a Kanadu z covid19_detail_global_differences k nové tabulce pro Èínu a k tabulce covid19_basic_differences: 
 covid_Australia_Canada_China AS
 (
 	SELECT		
@@ -166,9 +233,12 @@ covid_Australia_Canada_China AS
 		SUM(deaths) AS deaths,
 		SUM(recovered) AS recovered 
 	FROM covid19_detail_global_differences 
-	WHERE country IN ('Australia', 'Canada', 'China') 
+	WHERE country IN ('Australia', 'Canada') 
 	GROUP BY country, `date`
 	UNION 
+	SELECT *
+	FROM China_final
+	UNION
 	SELECT 
 		*
 	FROM covid19_basic_differences
@@ -188,8 +258,6 @@ LEFT JOIN lookup_table lt
   	 AND lt.province IS NULL
 ),
 -- Pøipojení covid19_tests_new
-/* Kvùli problémùm se dvìma záznami o testech u jednoho data u nìkterých zemí (viz. Projekt_priprava_kontrolni.sql) byla vytvoøena nová tabulka 
-   covid19_tests_new (viz. Projekt_upravene_tabulky.sql), která je použita místo tabulky covid19_tests. */
 joined_covid_lookup_tests AS 
 (
 	SELECT
@@ -200,7 +268,7 @@ joined_covid_lookup_tests AS
 		ON jcl.`date` = vct.`date`
 	   AND jcl.iso3 = vct.ISO
 )
--- Spojení dvou novì vytvoøených tabulek dohromady:
+-- Spojení dvou novì vytvoøených tabulek (v_joined_eco_co_rel a joined_covid_lookup_tests) dohromady, pøejmenování sloupcù a výpoèty:
 SELECT 
 	base.`date` AS datum,
 	base.country AS zemì,

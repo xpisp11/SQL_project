@@ -1,22 +1,102 @@
+-- Vytvoøení VIEW pro pøipojení Austrálie, Èíny a Kanady ke covid19_basic_differences (pouze pro kontrolu, v projektu není)
+
+CREATE OR REPLACE VIEW v_covid_Australia_Canada_China AS
+WITH 
+-- Vytvoøení nové tabulky pro Èínu z covid19_detail_global_differences
+China_confirmed AS
+(	
+	SELECT 
+		`date`,
+		country, 
+		sum(confirmed) AS confirmed
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_deaths AS
+(
+	SELECT 
+		`date`,
+		country, 
+		sum(deaths) AS deaths
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_recovered AS
+(
+	SELECT 
+		`date`,
+		country, 
+		sum(recovered) AS recovered
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_joined AS
+(	
+	SELECT
+		c.`date`,
+		c.country,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN c.confirmed END), 0) AS Mainland_China_confirmed,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN c.confirmed END), 0) AS China_confirmed,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN d.deaths END), 0) AS Mainland_China_deaths,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN d.deaths END), 0) AS China_deaths,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN r.recovered END), 0) AS Mainland_China_recovered,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN r.recovered END), 0) AS China_recovered
+	FROM China_confirmed c
+	LEFT JOIN China_deaths d
+		 ON c.`date` = d.`date`
+		AND c.country = d.country
+	LEFT JOIN China_recovered r 
+		 ON d.`date` = r.`date`
+		AND d.country = r.country
+	GROUP BY c.`date`, c.country
+),
+China_final AS
+(
+	SELECT
+		`date`,
+		'China' AS country,
+		(Mainland_China_confirmed + China_confirmed) AS confirmed,
+		(Mainland_China_deaths + China_deaths) AS deaths,
+		(Mainland_China_recovered + China_recovered) AS recovered
+	FROM China_joined
+)
+SELECT		
+	`date`,
+	country,
+	SUM(confirmed) AS confirmed,
+	SUM(deaths) AS deaths,
+	SUM(recovered) AS recovered 
+FROM covid19_detail_global_differences 
+WHERE country IN ('Australia', 'Canada') 
+GROUP BY country, `date`
+UNION 
+SELECT *
+FROM China_final
+UNION
+SELECT 
+	*
+FROM covid19_basic_differences;
+	
+	
+
+
+	
 -- mezikrok: spojení covid19_basic_diff s lookup a pak s economies a countries (bez covid19_tests)
 
 CREATE OR REPLACE VIEW v_joined_cov_lt_eco_co_rel AS
 WITH 
+-- Vytvoøení nové tabulky pro Èínu z covid19_detail_global_differences
 covid_Australia_Canada_China AS
 (
 	SELECT		
-		`date`,
-		country,
-		SUM(confirmed) AS confirmed,
-		SUM(deaths) AS deaths,
-		SUM(recovered) AS recovered 
-	FROM covid19_detail_global_differences 
-	WHERE country IN ('Australia', 'Canada', 'China') 
-	GROUP BY country, `date`
-	UNION 
-	SELECT 
 		*
-	FROM covid19_basic_differences
+	FROM v_covid_australia_canada_china
 ),
 -- Spojím covid_Australia_Canada_China (tj. rozšíøenou tabulku covid19_basic_differences) s lookup_table, tím získám k datùm o confirmed také iso3
 joined_covid_lookup AS	
@@ -65,7 +145,7 @@ SELECT
 	CONCAT(ROUND(v.`judaismus`/base.population * 100,1), ' %') AS "podíl_židù",
 	CONCAT(ROUND(v.`nepøidružená_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_nepøidruž._náb.",
 	CONCAT(ROUND(v.`lidová_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_lid._náb.",
-	CONCAT(ROUND(v.`jiná náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_jiných_náb."	
+	CONCAT(ROUND(v.`jiná_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_jiných_náb."	
 FROM joined_covid_lookup base 
 LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v 
 	ON base.iso3 = v.ISO
@@ -73,24 +153,11 @@ LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v
 
 
 
--- kontrola velikosti tabulky v_joined_cov_lt_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	- OK (pùvodnì 88 452, po pøidání Austrálie, Èíny a Kanady 89 798)
+-- kontrola velikosti tabulky v_joined_cov_lt_eco_co_rel (tím ovìøím spojení pomocí LEFT JOIN)  	- OK (pùvodnì 88 452, po pøidání Austrálie, Èíny a Kanady 89 847)
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
 	COUNT(*) AS "Poèet_øádkù"
-FROM (
-SELECT		
-		`date`,
-		country,
-		SUM(confirmed) AS confirmed,
-		SUM(deaths) AS deaths,
-		SUM(recovered) AS recovered 
-	FROM covid19_detail_global_differences 
-	WHERE country IN ('Australia', 'Canada', 'China') 
-	GROUP BY country, `date`
-	UNION 
-	SELECT 
-		*
-	FROM covid19_basic_differences) tabulka
+FROM v_covid_australia_canada_china  -- tabulka covid19_basic_differences rozšíøená o Austrálii, Èínu a Kanadu
 UNION
 SELECT 
 	"joined_table" AS "Tabulka",
@@ -183,11 +250,11 @@ FROM v_covid19_tests_new
 WHERE country = 'Singapore';
 
 
--- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel 			OK (pùvodnì 88 452, novì po pøidání Austrálie, Èíny a Kanady 89 798)
+-- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel 			OK (pùvodnì 88 452, novì po pøidání Austrálie, Èíny a Kanady 89 847)
 SELECT 
 	"covid19_basic_differences" AS "Tabulka",
 	COUNT(*) AS "Poèet_øádkù"
-FROM covid19_basic_differences
+FROM v_covid_australia_canada_china  -- tabulka covid19_basic_differences rozšíøená o Austrálii, Èínu a Kanadu
 UNION
 SELECT 
 	"joined_table" AS "Tabulka",
@@ -195,20 +262,87 @@ SELECT
 FROM v_joined_cov_lt_tests_eco_co_rel;	
 
 
--- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel_w		OK (pùvodnì 88 452, novì po pøidání Austrálie, Èíny a Kanady 89 798)
+-- kontrola velikosti tabulky v_joined_cov_lt_tests_eco_co_rel_w		OK (pùvodnì 88 452, novì po pøidání Austrálie, Èíny a Kanady 89 847)
 SELECT COUNT(*) FROM v_joined_cov_lt_tests_eco_co_rel_w;			
 
 
 -- kontrola poètu øádkù po pøidání Austrálie, Èíny, Kanady
-SELECT			-- OK (1 346 + 88 452 = 89 798) 
+SELECT			-- OK (1 395 + 88 452 = 89 847) 
 	COUNT(*)
 FROM (
-	SELECT
+	WITH 
+	China_confirmed AS
+	(	
+		SELECT 
+			`date`,
+			country, 
+			sum(confirmed) AS confirmed
+		FROM covid19_detail_global_differences
+		WHERE country LIKE '%China%' 
+		GROUP BY `date`
+		ORDER BY `date`
+	),
+	China_deaths AS
+	(
+		SELECT 
+			`date`,
+			country, 
+			sum(deaths) AS deaths
+		FROM covid19_detail_global_differences
+		WHERE country LIKE '%China%' 
+		GROUP BY `date`
+		ORDER BY `date`
+	),
+	China_recovered AS
+	(
+		SELECT 
+			`date`,
+			country, 
+			sum(recovered) AS recovered
+		FROM covid19_detail_global_differences
+		WHERE country LIKE '%China%' 
+		GROUP BY `date`
+		ORDER BY `date`
+	),
+	China_joined AS
+	(	
+		SELECT
+			c.`date`,
+			c.country,
+			COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN c.confirmed END), 0) AS Mainland_China_confirmed,
+			COALESCE(SUM(CASE WHEN c.country = 'China' THEN c.confirmed END), 0) AS China_confirmed,
+			COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN d.deaths END), 0) AS Mainland_China_deaths,
+			COALESCE(SUM(CASE WHEN c.country = 'China' THEN d.deaths END), 0) AS China_deaths,
+			COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN r.recovered END), 0) AS Mainland_China_recovered,
+			COALESCE(SUM(CASE WHEN c.country = 'China' THEN r.recovered END), 0) AS China_recovered
+		FROM China_confirmed c
+		LEFT JOIN China_deaths d
+			 ON c.`date` = d.`date`
+			AND c.country = d.country
+		LEFT JOIN China_recovered r 
+			 ON d.`date` = r.`date`
+			AND d.country = r.country
+		GROUP BY c.`date`, c.country
+	),
+	China_final AS
+	(
+		SELECT
+			`date`,
+			'China' AS country,
+			(Mainland_China_confirmed + China_confirmed) AS confirmed,
+			(Mainland_China_deaths + China_deaths) AS deaths,
+			(Mainland_China_recovered + China_recovered) AS recovered
+		FROM China_joined
+	)
+	SELECT		
 		`date`,
 		country,
 		SUM(confirmed) AS confirmed,
 		SUM(deaths) AS deaths,
 		SUM(recovered) AS recovered 
 	FROM covid19_detail_global_differences 
-	WHERE country IN ('Australia', 'Canada', 'China') 
-	GROUP BY country, `date`) tabulka;
+	WHERE country IN ('Australia', 'Canada') 
+	GROUP BY country, `date`
+	UNION 
+	SELECT *
+	FROM China_final) tabulka;

@@ -13,7 +13,6 @@ SELECT * FROM lookup_table;		-- country, iso3, population
 
 
 
-
   /***********************************************/
  /*  2. Øešení "issues" v datech èi tabulkách   */
 /***********************************************/
@@ -56,7 +55,6 @@ SELECT DISTINCT country FROM lookup_table;
 SELECT DISTINCT country FROM covid19_basic_differences;
 SELECT DISTINCT country FROM covid19_tests;
 SELECT DISTINCT country FROM religions;
-
 
 
 
@@ -172,7 +170,71 @@ SELECT * FROM v_joined_eco_co_rel;
 -- b) Propojení covid19_basic_diff s lookup a covid19_tests - uloženo jako v_joined_cov_lt_tests_eco_co_rel  
 CREATE OR REPLACE VIEW v_joined_cov_lt_tests_eco_co_rel AS
 WITH 
--- Spojím pøes UNION záznamy pro Austrálii, Èínu a Kanadu z covid19_detail_global_differences a covid19_basic_differences 
+-- Vytvoøení nové tabulky pro Èínu z covid19_detail_global_differences
+China_confirmed AS
+(	
+	SELECT 
+		`date`,
+		country, 
+		sum(confirmed) AS confirmed
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_deaths AS
+(
+	SELECT 
+		`date`,
+		country, 
+		sum(deaths) AS deaths
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_recovered AS
+(
+	SELECT 
+		`date`,
+		country, 
+		sum(recovered) AS recovered
+	FROM covid19_detail_global_differences
+	WHERE country LIKE '%China%' 
+	GROUP BY `date`
+	ORDER BY `date`
+),
+China_joined AS
+(	
+	SELECT
+		c.`date`,
+		c.country,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN c.confirmed END), 0) AS Mainland_China_confirmed,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN c.confirmed END), 0) AS China_confirmed,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN d.deaths END), 0) AS Mainland_China_deaths,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN d.deaths END), 0) AS China_deaths,
+		COALESCE(SUM(CASE WHEN c.country = 'Mainland China' THEN r.recovered END), 0) AS Mainland_China_recovered,
+		COALESCE(SUM(CASE WHEN c.country = 'China' THEN r.recovered END), 0) AS China_recovered
+	FROM China_confirmed c
+	LEFT JOIN China_deaths d
+		 ON c.`date` = d.`date`
+		AND c.country = d.country
+	LEFT JOIN China_recovered r 
+		 ON d.`date` = r.`date`
+		AND d.country = r.country
+	GROUP BY c.`date`, c.country
+),
+China_final AS
+(
+	SELECT
+		`date`,
+		'China' AS country,
+		(Mainland_China_confirmed + China_confirmed) AS confirmed,
+		(Mainland_China_deaths + China_deaths) AS deaths,
+		(Mainland_China_recovered + China_recovered) AS recovered
+	FROM China_joined
+),
+-- Pøipojení záznamù pro Austrálii a Kanadu z covid19_detail_global_differences k nové tabulce pro Èínu a k tabulce covid19_basic_differences: 
 covid_Australia_Canada_China AS
 (
 	SELECT		
@@ -182,9 +244,12 @@ covid_Australia_Canada_China AS
 		SUM(deaths) AS deaths,
 		SUM(recovered) AS recovered 
 	FROM covid19_detail_global_differences 
-	WHERE country IN ('Australia', 'Canada', 'China') 
+	WHERE country IN ('Australia', 'Canada') 
 	GROUP BY country, `date`
 	UNION 
+	SELECT *
+	FROM China_final
+	UNION
 	SELECT 
 		*
 	FROM covid19_basic_differences
@@ -205,7 +270,7 @@ LEFT JOIN lookup_table lt
 ),
 -- Pøipojím covid19_tests_new
 /* Kvùli problémùm se dvìma záznami o testech u jednoho data u nìkterých zemí (viz. Projekt_priprava_kontrolni.sql) jsem vytvoøila novou tabulku 
-   covid19_tests_new (viz. Projekt_upravene_tabulky.sql), kterou použiju místo tabulky covid19_tests */
+   covid19_tests_new (viz. Projekt_pomocne_tabulky.sql), kterou použiju místo tabulky covid19_tests */
 joined_covid_lookup_tests AS 
 (
 	SELECT
@@ -250,7 +315,7 @@ SELECT
 	CONCAT(ROUND(v.`judaismus`/base.population * 100,1), ' %') AS "podíl_židù",
 	CONCAT(ROUND(v.`nepøidružená_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_nepøidruž._náb.",
 	CONCAT(ROUND(v.`lidová_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_lid._náb.",
-	CONCAT(ROUND(v.`jiná náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_jiných_náb."	
+	CONCAT(ROUND(v.`jiná_náboženství`/base.population * 100,1), ' %') AS "podíl_pøíslušníkù_jiných_náb."	
 FROM joined_covid_lookup_tests base 
 LEFT JOIN (SELECT * FROM v_joined_eco_co_rel) v 
 	ON base.iso3 = v.ISO
@@ -268,8 +333,6 @@ WHERE 1=1
 	AND `year` = 2020
 	AND country = 'Afghanistan'
 	AND population = 30000;
-
-
 
 
   /************************/
@@ -339,7 +402,6 @@ ORDER BY datum;
 
 
 
-
   /*********************************/
  /*  6. Tabulka life_expectancy   */ 
 /*********************************/
@@ -393,7 +455,6 @@ LEFT JOIN pivoted_life_expectancy le
 SELECT * FROM v_petra_rohlickova_projekt_sql_final WHERE zemì IN ('Australia', 'Czechia', 'US') ORDER BY zemì, datum;
 
 SELECT * FROM v_petra_rohlickova_projekt_sql_final WHERE zemì = 'Afghanistan';
-
 
 
 
