@@ -1,12 +1,12 @@
   /*****************************/ 
- /*  Austrálie, Èína, Kanada  */ 
+ /*  Australie, Cina, Kanada  */ 
 /*****************************/
   
- /* Údaje pro tyto zemì z tabulky covid19_detail_global_differences pøipojím pøes UNION k tabulce covid19_basic_differences. 
-  	V tabulce covid19_detail_global_differences musím pouít GROUP BY, abych hodnoty za jednotlivé provincie spojila do jednoho celkového souètu pro kadé datum.
-	Napøed si pøipravím tabulku pro Èínu (musím seèíst hodnoty pro Mainland China a China), tu pak pøes UNION spojím s novou tabulkou pro Austrálii a Kanadu */
+ /* Udaje pro tyto zeme z tabulky covid19_detail_global_differences pripojim pres UNION k tabulce covid19_basic_differences. 
+  	V tabulce covid19_detail_global_differences musim pouzit GROUP BY, abych hodnoty za jednotlive provincie spojila do jednoho celkoveho souctu pro kazde datum.
+	Napred si pripravim tabulku pro Cinu (musim secist hodnoty pro Mainland China a China), tu pak pres UNION spojim s novou tabulkou pro Australii a Kanadu */
 
--- Èína zobrazení hodnot pro China a Mainland China
+-- Cina zobrazeni hodnot pro China a Mainland China
 SELECT
 	`date`,
 	country,
@@ -19,8 +19,8 @@ GROUP BY country, `date`
 ORDER BY `date`;
 
 
--- Vytvoøení nové tabulky pro Èínu, která pùjde pøes UNION pøipojit ke covid19_basic_differences  
-WITH		-- pouiju ve WITH pro tvorbu tabulky China_final
+-- Vytvorení nove tabulky pro Cinu, ktera pujde pres UNION pripojit ke covid19_basic_differences  
+WITH		-- pouziju ve WITH pro tvorbu tabulky China_final
 China_confirmed AS
 (	
 	SELECT 
@@ -83,8 +83,8 @@ SELECT
 FROM China_joined; 
   
 
--- Vytvoøení nové tabulky pro Austrálii a Kanadu, která pùjde pøipojit ke covid19_basic_differences
-SELECT		-- pouiju ve WITH v covid_Australia_Canada_China
+-- Vytvoreni nove tabulky pro Australii a Kanadu, ktera pujde pripojit ke covid19_basic_differences
+SELECT		-- pouziju ve WITH v covid_Australia_Canada_China
 	`date`,
 	country,
 	SUM(confirmed) AS confirmed,
@@ -100,9 +100,9 @@ GROUP BY country, `date`;
  /*  covid19_tests_new  */ 
 /***********************/
   
-/* Pøipravím si nové tabulky covid19_tests pro "problematické" zemì, ve kterıch urèím jen jednu entitu. Pomocí UNION tyto tabulky spojím spolu navzájem
-   a také s tabulkou covid19_tests bez tìchto zemí. Tím získám novou tabulku covid19_tests_new, která u u tìchto "problematickıch" zemí nebude mít
-   zdvojené záznamy pro ádné datum */
+/* Pripravim si nove tabulky covid19_tests pro "problematicke" zeme, ve kterych urcim jen jednu entitu. Pomoci UNION tyto tabulky spojim spolu navzajem
+   a take s tabulkou covid19_tests bez techto zemi. Tim ziskam novou tabulku covid19_tests_new, ktera uz u techto "problematickych" zemi nebude mit
+   zdvojene zaznamy pro zadne datum */
 
 CREATE OR REPLACE VIEW v_covid19_tests_new AS
 SELECT *
@@ -151,23 +151,23 @@ SELECT * FROM v_covid19_tests_new WHERE country = 'United States';
 
   
   /****************************************/
- /*  Vıpoèty pro tvorbu dalších sloupcù  */
+ /*  Vypocty pro tvorbu dalsich sloupcu  */
 /****************************************/
   
-SELECT		-- pøidám do SELECTu pro vıpis vısledné tabulky
+SELECT		-- pridam do SELECTu pro vypis vysledne tabulky
 	*,
-	-- binární promìnná pro víkend / pracovní den
+	-- binarni promenna pro vikend / pracovni den
 	CASE 
 		WHEN WEEKDAY(datum) IN (5, 6) THEN 1 
 		ELSE 0 
-		END AS "Víkend",
+		END AS "vikend",
 	-- roèní období
 	CASE 
 		WHEN datum < '2020-03-20' OR (datum BETWEEN '2020-12-21' AND '2021-03-19') THEN "zima"
 		WHEN datum < '2020-06-20' OR (datum BETWEEN '2021-03-20' AND '2021-06-20') THEN "jaro"
-		WHEN datum < '2020-09-22' THEN "léto"
+		WHEN datum < '2020-09-22' THEN "leto"
 		WHEN datum < '2020-12-21' THEN "podzim"
-		END AS "Roèní období"
+		END AS "rocni obdobi"
 FROM v_joined_covid_lookup_tests_economies_countries
 -- WHERE ISO = 'USA'
 ;
@@ -178,13 +178,13 @@ FROM v_joined_covid_lookup_tests_economies_countries
  /*  religion  */
 /**************/
 
--- Podívám se, jak tabulka vypadá. Zajímají mì jen údaje z roku 2020 a to pro jednotlivé zemì (ne All Countries) 
+-- Podivam se, jak tabulka vypada. Zajimaji me jen udaje z roku 2020 a to pro jednotlive zeme (ne All Countries) 
 SELECT * FROM religions WHERE `year` = '2020' AND country <> 'All Countries';
 
 
--- Chyba v datech u Afghanistánu (v roce 2020 má bıt Other Religions 30,000)
+-- Chyba v datech u Afghanistanu (v roce 2020 ma byt Other Religions 30,000)
 SELECT * FROM religions WHERE country = 'Afghanistan' AND religion IN ('Folk Religions', 'Other Religions');
--- Opravím pøímo v tabulce:
+-- Opravim primo v tabulce:
 UPDATE religions 
 SET religion = 'Other Religions'
 WHERE 1=1
@@ -193,19 +193,19 @@ WHERE 1=1
 	AND population = 30000;
 
 
--- Protoe chci údaje ke kadé zemi mít pouze na jednom øádku, pøetransponuju si øádky s jednotlivımi náboenstvími na sloupce.
+-- Protoze chci udaje ke kazde zemi mit pouze na jednom radku, pretransponuju si radky s jednotlivymi nabozenstvimi na sloupce.
 SELECT DISTINCT religion FROM religions;
 
-SELECT 		-- pouiju ve WITH jako pivoted_religions pro pøipojení k tabulce joined_economies_countries	
+SELECT 		-- pouziju ve WITH jako pivoted_religions pro pripojeni k tabulce joined_economies_countries	
    country,
-   MAX(CASE WHEN religion = 'Christianity' THEN population END) AS "køesanství",
-   MAX(CASE WHEN religion = 'Islam' THEN population END) AS "islám",
+   MAX(CASE WHEN religion = 'Christianity' THEN population END) AS "krestanstvi",
+   MAX(CASE WHEN religion = 'Islam' THEN population END) AS "islam",
    MAX(CASE WHEN religion = 'Hinduism' THEN population END) AS "hinduismus",
    MAX(CASE WHEN religion = 'Buddhism' THEN population END) AS "budhismus",
    MAX(CASE WHEN religion = 'Judaism' THEN population END) AS "judaismus",
-   MAX(CASE WHEN religion = 'Unaffiliated Religions' THEN population END) AS "nepøidruená_náboenství",
-   MAX(CASE WHEN religion = 'Folk Religions' THEN population END) AS "lidová_náboenství",
-   MAX(CASE WHEN religion = 'Other Religions' THEN population END) AS "jiná_náboenství"
+   MAX(CASE WHEN religion = 'Unaffiliated Religions' THEN population END) AS "nepridruzena_nabozenstvi",
+   MAX(CASE WHEN religion = 'Folk Religions' THEN population END) AS "lidova_nabozenstvi",
+   MAX(CASE WHEN religion = 'Other Religions' THEN population END) AS "jina_nabozenstvi"
 FROM religions
 WHERE 1=1
 	AND `year` = '2020' 
@@ -213,40 +213,40 @@ WHERE 1=1
 GROUP BY country;
 
 
-/* Abych mohla stanovit podíly pøíslušníkù jednotlivıch náboenství v zemi na celkovém obyvatelstvu, musím napøed spojit tabulku 
-   pivoted_religions s tabulkou obsahující informaci o celkové populaci zemì (nejlépe lookup_table, kterou jsem si na zaèátku urèila 
-   jako vıchozí pro hodnoty poètu obyvatel státù). 
-   Nejprve ale musím zjistit, jaké názvy mají zemì v tabulce religions (napø. jestli ÈR je Czech Republic jako v tabulce economies a 
+/* Abych mohla stanovit podily prislusniku jednotlivych nabozenstvi v zemi na celkovem obyvatelstvu, musim napred spojit tabulku 
+   pivoted_religions s tabulkou obsahujici informaci o celkove populaci zeme (nejlepe lookup_table, kterou jsem si na zacatku urcila 
+   jako vychozi pro hodnoty poctu obyvatel statu). 
+   Nejprve ale musim zjistit, jake nazvy maji zeme v tabulce religions (napr. jestli CR je Czech Republic jako v tabulce economies a 
    countries nebo Czechia jako v tabulce lookuup_table a covid19_basic_differences) */
 
 SELECT DISTINCT country FROM religions WHERE country <> 'All Countries' ORDER BY country;
 
 
-/* Názvy jsou stejné jako v tabulká economies a countries, take tabulku religion nejprve spojím s joined_economies_countries
-   a vytvoøím nové VIEW v_joined_eco_co_rel, se kterım dále pracuju (viz. Projekt_final.sql) */
+/* Nazvy jsou stejne jako v tabulkach economies a countries, takze tabulku religion nejprve spojim s joined_economies_countries
+   a vytvorim nove VIEW v_joined_eco_co_rel, se kterym dale pracuju (viz. Projekt_final.sql) */
 
 
 
 
   /*******************************/
- /*  Vıpoèty v tabulce weather  */
+ /*  Vypocty v tabulce weather  */
 /*******************************/
 
 SELECT DISTINCT city FROM weather ORDER BY city;
 SELECT DISTINCT capital_city FROM countries ORDER BY capital_city;
 
--- - Pøepíšu si názvy hlavních mìst v tabulce weather (city) tak, aby byly shodné s názvy v tabulce countries (capital_city).
--- -- Udìlám vıpoèty ve sloupcích s teplotou, vìtrem a deštìm 
+-- - Prepisu si nazvy hlavnich mest v tabulce weather (city) tak, aby byly shodne s nazvy v tabulce countries (capital_city).
+-- -- Udelam vypocty ve sloupcich s teplotou, vetrem a destem 
  
-SELECT		-- pouiju ve WITH jako weather_new
+SELECT		-- pouziju ve WITH jako weather_new
 	CAST(`date`AS date) AS datum,
-	-- prùmìrná denní (nikoli noèní!) teplota
-	-- odstranila jsem " °c", vypoèítala prùmìr pouze z teplot pro èasy z daného intervalu a zase pøipojila " °c"
-	CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prùm._denní_teplota",	
-	-- poèet hodin v daném dni, kdy byly sráky nenulové
-	SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "poèet_hod._se_srákami",
-	-- maximální síla vìtru v nárazech bìhem dne
-	CONCAT(MAX(CAST(REPLACE(gust,' km/h', '') AS INT)), ' km/h') AS "max_vítr_v_nárazech",
+	-- prumerna denni (nikoli nocni!) teplota
+	-- odstranila jsem " °c", vypocitala prumer pouze z teplot pro casy z daneho intervalu a zase pripojila " °c"
+	CONCAT(ROUND((SUM((CASE WHEN `time` IN ('09:00', '12:00', '15:00', '18:00') THEN 1 ELSE 0 END) * REPLACE(temp,' °c', ''))) / 4), ' °c') AS "prum_denni_teplota",	
+	-- pocet hodin v danem dni, kdy byly srazky nenulove
+	SUM(CASE WHEN rain = '0.0 mm' THEN 0 ELSE 1 END) * 3 AS "pocet_hod_se_srazkami",
+	-- maximalni sila vetru v narazech behem dne
+	CONCAT(MAX(CAST(REPLACE(gust,' km/h', '') AS INT)), ' km/h') AS "max_vitr_v_narazech",
 	CASE 
 		WHEN city = 'Athens' THEN 'Athenai'
 		WHEN city = 'Brussels' THEN 'Bruxelles [Brussel]'
@@ -271,18 +271,18 @@ SELECT `date`, `time`, temp, gust, rain FROM weather WHERE city = 'Prague';
 
 
   /********************************/
- /*  Pivotování life_expectancy  */
+ /*  Pivotovani life_expectancy  */
 /********************************/
 
--- Podívám se, jak tabulka vypadá.
+-- Podivam se, jak tabulka vypada.
 SELECT * FROM life_expectancy;
 
-/*Tabulka má sloupec iso3, pøes kterı mùu pomocí LEFT JOIN tabulku pøipojit k velké vısledné tabulce. Napøed ale musím øádky s rokem 1965 a 2015 
-  transponovat do sloupcù, abych od sebe mohla hodnoty snadno odeèíst */
+/*Tabulka ma sloupec iso3, pres ktery muzu pomoci LEFT JOIN tabulku pripojit k velke vysledne tabulce. Napred ale musim radky s rokem 1965 a 2015 
+  transponovat do sloupcu, abych od sebe mohla hodnoty snadno odecist */
 
 WITH 
--- transponování
-pivoted_life_expectancy AS 	-- pouiju ve WITH pro pøipojení k tabulce v_joined_cov_lt_tests_eco_co_rel_w
+-- transponovani
+pivoted_life_expectancy AS 	-- pouziju ve WITH pro pripojeni k tabulce v_joined_cov_lt_tests_eco_co_rel_w
 (
 	SELECT 
         iso3,
@@ -291,12 +291,10 @@ pivoted_life_expectancy AS 	-- pouiju ve WITH pro pøipojení k tabulce v_joined_
     FROM life_expectancy
     GROUP BY iso3
 )
--- pøipojení tabulky k velké vısledné tabulce
+-- pripojeni tabulky k velke vysledne tabulce
 SELECT
     base.*,
-    ROUND(le.life_expectancy_2015 - le.life_expectancy_1965,1) AS "rozdíl_doití_2015_1965"
+    ROUND(le.life_expectancy_2015 - le.life_expectancy_1965,1) AS "rozdil_doziti_2015_1965"
 FROM v_joined_cov_lt_tests_eco_co_rel_w base
 LEFT JOIN pivoted_life_expectancy le
   ON base.ISO = le.iso3
-
-
