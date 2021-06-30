@@ -1,8 +1,8 @@
-# my-github-repo
+# SQL_project
 
-Finálním vıstupem projektu je soubor Projekt_final.sql.
+FinÃ¡lnÃ­m vÃ½stupem projektu je soubor Projekt_final.sql.
 
-Po stisknutí Alt+X vznikne 5 VIEW:
+Po stisknutÃ­ Alt+X vznikne 5 VIEW:
 
 1) v_joined_eco_co_rel
 2) v_joined_cov_lt_tests_eco_co_rel
@@ -10,19 +10,19 @@ Po stisknutí Alt+X vznikne 5 VIEW:
 4) v_joined_cov_lt_tests_eco_co_rel_w 
 5) v_Petra_Rohlickova_projekt_SQL_final
 
-Nakonec se z posledního VIEW vytvoøí poadovaná tabulka:
+Nakonec se z poslednÃ­ho VIEW vytvoÅ™Ã­ poÅ¾adovanÃ¡ tabulka:
 
 CREATE TABLE t_Petra_Rohlickova_projekt_SQL_final AS
 SELECT *
 FROM v_Petra_Rohlickova_projekt_SQL_final 
  
 
-Souèástí repozitáøe jsou také následující soubory, z nich klíèové jsou pouze první dva z nich:
+SouÄÃ¡stÃ­ repozitÃ¡Å™e jsou takÃ© nÃ¡sledujÃ­cÃ­ soubory, z nichÅ¾ klÃ­ÄovÃ© jsou pouze prvnÃ­ dva z nich:
 
- - Projekt_final_vypis_tabulky.sql - script pro vypsání vısledné tabulky
- - Projekt_pruvodka.docx - detailní popis postupu v rámci celého projektu
- - Projekt_priprava.sql - detailnìji popsané pøípravné kroky (èíslování "kapitol" navázáno na kapitoly v dokumentu Projekt_pruvodka.docx)
- - Projekt_priprava_kontrolni.sql - dotazy pro kontrolu správnosti napojení tabulek apod.
- - Projekt_pomocne_tabulky.xlsx - tabulky v excelu slouící pro rychlou kontrolu názvu zemí a mìst v rùznıch tabulkách a pro kontrolu vıpoètù v rámci tabulky weather
- - Projekt_pomocne_tabulky.sql - novì vytvoøené tabulky, které byly následnì pouity v souboru Projekt_final.sql
+ - Projekt_final_vypis_tabulky.sql - script pro vypsÃ¡nÃ­ vÃ½slednÃ© tabulky
+ - Projekt_pruvodka.docx - detailnÃ­ popis postupu v rÃ¡mci celÃ©ho projektu
+ - Projekt_priprava.sql - detailnÄ›ji popsanÃ© pÅ™Ã­pravnÃ© kroky (ÄÃ­slovÃ¡nÃ­ "kapitol" navÃ¡zÃ¡no na kapitoly v dokumentu Projekt_pruvodka.docx)
+ - Projekt_priprava_kontrolni.sql - dotazy pro kontrolu sprÃ¡vnosti napojenÃ­ tabulek apod.
+ - Projekt_pomocne_tabulky.xlsx - tabulky v excelu slouÅ¾Ã­cÃ­ pro rychlou kontrolu nÃ¡zvu zemÃ­ a mÄ›st v rÅ¯znÃ½ch tabulkÃ¡ch a pro kontrolu vÃ½poÄtÅ¯ v rÃ¡mci tabulky weather
+ - Projekt_pomocne_tabulky.sql - novÄ› vytvoÅ™enÃ© tabulky, kterÃ© byly nÃ¡slednÄ› pouÅ¾ity v souboru Projekt_final.sql
 
