@@ -1,53 +1,55 @@
-SQL projekt
+# SQL projekt
 
-Pøíprava dat pro další analızu šíøení COVID-19
+## PÅ™Ã­prava dat pro dalÅ¡Ã­ analÃ½zu Å¡Ã­Å™enÃ­ COVID-19
 
-Zadání projektu
+**ZadÃ¡nÃ­ projektu**
 
-Cílem projektu je pøipravit pro statistika pracujícího na urèení faktorù, které ovlivòují rychlost šíøení koronaviru na úrovni jednotlivıch státù, data, která bude dále statisticky zpracovávat. Bude se jednat o tabulku na databázi, ze které se budou dát získat poadovaná data jedním selectem. 
+CÃ­lem projektu je pÅ™ipravit pro statistika pracujÃ­cÃ­ho na urÄenÃ­ faktorÅ¯, kterÃ© ovlivÅˆujÃ­ rychlost Å¡Ã­Å™enÃ­ koronaviru na Ãºrovni jednotlivÃ½ch stÃ¡tÅ¯, data, kterÃ¡ bude dÃ¡le statisticky zpracovÃ¡vat. Bude se jednat o tabulku na databÃ¡zi, ze kterÃ© se budou dÃ¡t zÃ­skat poÅ¾adovanÃ¡ data jednÃ­m selectem. 
 
-Vısledná data budou panelová, klíèe budou stát (country) a den (date). Statistik bude vyhodnocovat model, kterı bude vysvìtlovat denní nárùsty nakaenıch v jednotlivıch zemích. Samotné poèty nakaenıch pro nìj nicménì nejsou dostaèující - je potøeba vzít v úvahu také poèty provedenıch testù a poèet obyvatel daného státu. Z tìchto tøí promìnnıch bude potom moné vytvoøit vhodnou vysvìtlovanou promìnnou. Denní poèty nakaenıch budou vysvìtlována pomocí promìnnıch nìkolika typù. Kadı sloupec v tabulce bude pøedstavovat jednu promìnnou, pøièem se bude jednat o následující sloupce:
+VÃ½slednÃ¡ data budou panelovÃ¡, klÃ­Äe budou stÃ¡t (country) a den (date). Statistik bude vyhodnocovat model, kterÃ½ bude vysvÄ›tlovat dennÃ­ nÃ¡rÅ¯sty nakaÅ¾enÃ½ch v jednotlivÃ½ch zemÃ­ch. SamotnÃ© poÄty nakaÅ¾enÃ½ch pro nÄ›j nicmÃ©nÄ› nejsou dostaÄujÃ­cÃ­ - je potÅ™eba vzÃ­t v Ãºvahu takÃ© poÄty provedenÃ½ch testÅ¯ a poÄet obyvatel danÃ©ho stÃ¡tu. Z tÄ›chto tÅ™Ã­ promÄ›nnÃ½ch bude potom moÅ¾nÃ© vytvoÅ™it vhodnou vysvÄ›tlovanou promÄ›nnou. DennÃ­ poÄty nakaÅ¾enÃ½ch budou vysvÄ›tlovÃ¡na pomocÃ­ promÄ›nnÃ½ch nÄ›kolika typÅ¯. KaÅ¾dÃ½ sloupec v tabulce bude pÅ™edstavovat jednu promÄ›nnou, pÅ™iÄemÅ¾ se bude jednat o nÃ¡sledujÃ­cÃ­ sloupce:
 
-Èasové promìnné
-binární promìnná pro víkend / pracovní den
-roèní období daného dne (zakódovat jako 0 a 3)
+ÄŒasovÃ© promÄ›nnÃ©
+- binÃ¡rnÃ­ promÄ›nnÃ¡ pro vÃ­kend / pracovnÃ­ den
+- roÄnÃ­ obdobÃ­ danÃ©ho dne (zakÃ³dovat jako 0 aÅ¾ 3)
 
-Promìnné specifické pro danı stát
-hustota zalidnìní - ve státech s vyšší hustotou zalidnìní se nákaza mùe šíøit rychleji
-HDP na obyvatele - pouije se jako indikátor ekonomické vyspìlosti státu
-GINI koeficient - má majetková nerovnost vliv na šíøení koronaviru?
-dìtská úmrtnost - pouijeme jako indikátor kvality zdravotnictví
-medián vìku obyvatel v roce 2018 - státy se starším obyvatelstvem mohou bıt postieny více
-podíly jednotlivıch náboenství - pouijí se jako proxy promìnná pro kulturní specifika, pro kadé náboenství v daném státì je potøeba urèit procentní podíl jeho pøíslušníkù na celkovém obyvatelstvu
-rozdíl mezi oèekávanou dobou doití v roce 1965 a v roce 2015 - státy, ve kterıch probìhl rychlı rozvoj, mohou reagovat jinak ne zemì, které jsou vyspìlé u delší dobu
+PromÄ›nnÃ© specifickÃ© pro danÃ½ stÃ¡t
+- hustota zalidnÄ›nÃ­ - ve stÃ¡tech s vyÅ¡Å¡Ã­ hustotou zalidnÄ›nÃ­ se nÃ¡kaza mÅ¯Å¾e Å¡Ã­Å™it rychleji
+- HDP na obyvatele - pouÅ¾ije se jako indikÃ¡tor ekonomickÃ© vyspÄ›losti stÃ¡tu
+- GINI koeficient - mÃ¡ majetkovÃ¡ nerovnost vliv na Å¡Ã­Å™enÃ­ koronaviru?
+- dÄ›tskÃ¡ Ãºmrtnost - pouÅ¾ijeme jako indikÃ¡tor kvality zdravotnictvÃ­
+- mediÃ¡n vÄ›ku obyvatel v roce 2018 - stÃ¡ty se starÅ¡Ã­m obyvatelstvem mohou bÃ½t postiÅ¾eny vÃ­ce
+- podÃ­ly jednotlivÃ½ch nÃ¡boÅ¾enstvÃ­ - pouÅ¾ijÃ­ se jako proxy promÄ›nnÃ¡ pro kulturnÃ­ specifika, pro kaÅ¾dÃ© nÃ¡boÅ¾enstvÃ­ v danÃ©m stÃ¡tÄ› je potÅ™eba urÄit procentnÃ­ podÃ­l jeho pÅ™Ã­sluÅ¡nÃ­kÅ¯ na celkovÃ©m obyvatelstvu
+- rozdÃ­l mezi oÄekÃ¡vanou dobou doÅ¾itÃ­ v roce 1965 a v roce 2015 - stÃ¡ty, ve kterÃ½ch probÄ›hl rychlÃ½ rozvoj, mohou reagovat jinak neÅ¾ zemÄ›, kterÃ© jsou vyspÄ›lÃ© uÅ¾ delÅ¡Ã­ dobu
 
-Poèasí (ovlivòuje chování lidí a také schopnost šíøení viru)
-prùmìrná denní (nikoli noèní!) teplota
-poèet hodin v daném dni, kdy byly sráky nenulové
-maximální síla vìtru v nárazech bìhem dne
+PoÄasÃ­ (ovlivÅˆuje chovÃ¡nÃ­ lidÃ­ a takÃ© schopnost Å¡Ã­Å™enÃ­ viru)
+- prÅ¯mÄ›rnÃ¡ dennÃ­ (nikoli noÄnÃ­!) teplota
+- poÄet hodin v danÃ©m dni, kdy byly srÃ¡Å¾ky nenulovÃ©
+- maximÃ¡lnÃ­ sÃ­la vÄ›tru v nÃ¡razech bÄ›hem dne
 
-Veškerá potøebná data jsou dostupná v relaèní databázi, pøedevším v tabulkách: countries, economies, life_expectancy, religions, covid19_basic_differences, covid19_testing, weather, lookup_table.
+VeÅ¡kerÃ¡ potÅ™ebnÃ¡ data jsou dostupnÃ¡ v relaÄnÃ­ databÃ¡zi, pÅ™edevÅ¡Ã­m v tabulkÃ¡ch: countries, economies, life_expectancy, religions, covid19_basic_differences, covid19_testing, weather, lookup_table.
 
-###############################
 
-Finálním vıstupem projektu je soubor Projekt_final.sql.
 
-Po stisknutí Alt+X vznikne 5 VIEW:
+**VÃ½stup projektu**
+
+FinÃ¡lnÃ­m vÃ½stupem projektu je soubor Projekt_final.sql.
+
+Po stisknutÃ­ Alt+X vznikne 5 VIEW:
 
 v_joined_eco_co_rel
 v_joined_cov_lt_tests_eco_co_rel
 v_covid19_tests_new
 v_joined_cov_lt_tests_eco_co_rel_w
 v_Petra_Rohlickova_projekt_SQL_final
-Nakonec se z posledního VIEW vytvoøí poadovaná tabulka:
+Nakonec se z poslednÃ­ho VIEW vytvoÅ™Ã­ poÅ¾adovanÃ¡ tabulka:
 
 CREATE TABLE t_Petra_Rohlickova_projekt_SQL_final AS SELECT * FROM v_Petra_Rohlickova_projekt_SQL_final
 
-Souèástí repozitáøe jsou také následující soubory, z nich klíèové jsou pouze první dva z nich:
+SouÄÃ¡stÃ­ repozitÃ¡Å™e jsou takÃ© nÃ¡sledujÃ­cÃ­ soubory, z nichÅ¾ klÃ­ÄovÃ© jsou pouze prvnÃ­ dva z nich:
 
-Projekt_final_vypis_tabulky.sql - script pro vypsání vısledné tabulky
-Projekt_pruvodka.docx - detailní popis postupu v rámci celého projektu
-Projekt_priprava.sql - detailnìji popsané pøípravné kroky (èíslování "kapitol" navázáno na kapitoly v dokumentu Projekt_pruvodka.docx)
-Projekt_priprava_kontrolni.sql - dotazy pro kontrolu správnosti napojení tabulek apod.
-Projekt_pomocne_tabulky.xlsx - tabulky v excelu slouící pro rychlou kontrolu názvu zemí a mìst v rùznıch tabulkách a pro kontrolu vıpoètù v rámci tabulky weather
-Projekt_pomocne_tabulky.sql - novì vytvoøené tabulky, které byly následnì pouity v souboru Projekt_final.sql
+Projekt_final_vypis_tabulky.sql - script pro vypsÃ¡nÃ­ vÃ½slednÃ© tabulky
+Projekt_pruvodka.docx - detailnÃ­ popis postupu v rÃ¡mci celÃ©ho projektu
+Projekt_priprava.sql - detailnÄ›ji popsanÃ© pÅ™Ã­pravnÃ© kroky (ÄÃ­slovÃ¡nÃ­ "kapitol" navÃ¡zÃ¡no na kapitoly v dokumentu Projekt_pruvodka.docx)
+Projekt_priprava_kontrolni.sql - dotazy pro kontrolu sprÃ¡vnosti napojenÃ­ tabulek apod.
+Projekt_pomocne_tabulky.xlsx - tabulky v excelu slouÅ¾Ã­cÃ­ pro rychlou kontrolu nÃ¡zvu zemÃ­ a mÄ›st v rÅ¯znÃ½ch tabulkÃ¡ch a pro kontrolu vÃ½poÄtÅ¯ v rÃ¡mci tabulky weather
+Projekt_pomocne_tabulky.sql - novÄ› vytvoÅ™enÃ© tabulky, kterÃ© byly nÃ¡slednÄ› pouÅ¾ity v souboru Projekt_final.sql
