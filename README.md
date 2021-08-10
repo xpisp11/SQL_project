@@ -1,28 +1,53 @@
-# SQL_project
+SQL projekt
 
-FinÃ¡lnÃ­m vÃ½stupem projektu je soubor Projekt_final.sql.
+Pøíprava dat pro další analızu šíøení COVID-19
 
-Po stisknutÃ­ Alt+X vznikne 5 VIEW:
+Zadání projektu
 
-1) v_joined_eco_co_rel
-2) v_joined_cov_lt_tests_eco_co_rel
-3) v_covid19_tests_new
-4) v_joined_cov_lt_tests_eco_co_rel_w 
-5) v_Petra_Rohlickova_projekt_SQL_final
+Cílem projektu je pøipravit pro statistika pracujícího na urèení faktorù, které ovlivòují rychlost šíøení koronaviru na úrovni jednotlivıch státù, data, která bude dále statisticky zpracovávat. Bude se jednat o tabulku na databázi, ze které se budou dát získat poadovaná data jedním selectem. 
 
-Nakonec se z poslednÃ­ho VIEW vytvoÅ™Ã­ poÅ¾adovanÃ¡ tabulka:
+Vısledná data budou panelová, klíèe budou stát (country) a den (date). Statistik bude vyhodnocovat model, kterı bude vysvìtlovat denní nárùsty nakaenıch v jednotlivıch zemích. Samotné poèty nakaenıch pro nìj nicménì nejsou dostaèující - je potøeba vzít v úvahu také poèty provedenıch testù a poèet obyvatel daného státu. Z tìchto tøí promìnnıch bude potom moné vytvoøit vhodnou vysvìtlovanou promìnnou. Denní poèty nakaenıch budou vysvìtlována pomocí promìnnıch nìkolika typù. Kadı sloupec v tabulce bude pøedstavovat jednu promìnnou, pøièem se bude jednat o následující sloupce:
 
-CREATE TABLE t_Petra_Rohlickova_projekt_SQL_final AS
-SELECT *
-FROM v_Petra_Rohlickova_projekt_SQL_final 
- 
+Èasové promìnné
+binární promìnná pro víkend / pracovní den
+roèní období daného dne (zakódovat jako 0 a 3)
 
-SouÄÃ¡stÃ­ repozitÃ¡Å™e jsou takÃ© nÃ¡sledujÃ­cÃ­ soubory, z nichÅ¾ klÃ­ÄovÃ© jsou pouze prvnÃ­ dva z nich:
+Promìnné specifické pro danı stát
+hustota zalidnìní - ve státech s vyšší hustotou zalidnìní se nákaza mùe šíøit rychleji
+HDP na obyvatele - pouije se jako indikátor ekonomické vyspìlosti státu
+GINI koeficient - má majetková nerovnost vliv na šíøení koronaviru?
+dìtská úmrtnost - pouijeme jako indikátor kvality zdravotnictví
+medián vìku obyvatel v roce 2018 - státy se starším obyvatelstvem mohou bıt postieny více
+podíly jednotlivıch náboenství - pouijí se jako proxy promìnná pro kulturní specifika, pro kadé náboenství v daném státì je potøeba urèit procentní podíl jeho pøíslušníkù na celkovém obyvatelstvu
+rozdíl mezi oèekávanou dobou doití v roce 1965 a v roce 2015 - státy, ve kterıch probìhl rychlı rozvoj, mohou reagovat jinak ne zemì, které jsou vyspìlé u delší dobu
 
- - Projekt_final_vypis_tabulky.sql - script pro vypsÃ¡nÃ­ vÃ½slednÃ© tabulky
- - Projekt_pruvodka.docx - detailnÃ­ popis postupu v rÃ¡mci celÃ©ho projektu
- - Projekt_priprava.sql - detailnÄ›ji popsanÃ© pÅ™Ã­pravnÃ© kroky (ÄÃ­slovÃ¡nÃ­ "kapitol" navÃ¡zÃ¡no na kapitoly v dokumentu Projekt_pruvodka.docx)
- - Projekt_priprava_kontrolni.sql - dotazy pro kontrolu sprÃ¡vnosti napojenÃ­ tabulek apod.
- - Projekt_pomocne_tabulky.xlsx - tabulky v excelu slouÅ¾Ã­cÃ­ pro rychlou kontrolu nÃ¡zvu zemÃ­ a mÄ›st v rÅ¯znÃ½ch tabulkÃ¡ch a pro kontrolu vÃ½poÄtÅ¯ v rÃ¡mci tabulky weather
- - Projekt_pomocne_tabulky.sql - novÄ› vytvoÅ™enÃ© tabulky, kterÃ© byly nÃ¡slednÄ› pouÅ¾ity v souboru Projekt_final.sql
+Poèasí (ovlivòuje chování lidí a také schopnost šíøení viru)
+prùmìrná denní (nikoli noèní!) teplota
+poèet hodin v daném dni, kdy byly sráky nenulové
+maximální síla vìtru v nárazech bìhem dne
 
+Veškerá potøebná data jsou dostupná v relaèní databázi, pøedevším v tabulkách: countries, economies, life_expectancy, religions, covid19_basic_differences, covid19_testing, weather, lookup_table.
+
+###############################
+
+Finálním vıstupem projektu je soubor Projekt_final.sql.
+
+Po stisknutí Alt+X vznikne 5 VIEW:
+
+v_joined_eco_co_rel
+v_joined_cov_lt_tests_eco_co_rel
+v_covid19_tests_new
+v_joined_cov_lt_tests_eco_co_rel_w
+v_Petra_Rohlickova_projekt_SQL_final
+Nakonec se z posledního VIEW vytvoøí poadovaná tabulka:
+
+CREATE TABLE t_Petra_Rohlickova_projekt_SQL_final AS SELECT * FROM v_Petra_Rohlickova_projekt_SQL_final
+
+Souèástí repozitáøe jsou také následující soubory, z nich klíèové jsou pouze první dva z nich:
+
+Projekt_final_vypis_tabulky.sql - script pro vypsání vısledné tabulky
+Projekt_pruvodka.docx - detailní popis postupu v rámci celého projektu
+Projekt_priprava.sql - detailnìji popsané pøípravné kroky (èíslování "kapitol" navázáno na kapitoly v dokumentu Projekt_pruvodka.docx)
+Projekt_priprava_kontrolni.sql - dotazy pro kontrolu správnosti napojení tabulek apod.
+Projekt_pomocne_tabulky.xlsx - tabulky v excelu slouící pro rychlou kontrolu názvu zemí a mìst v rùznıch tabulkách a pro kontrolu vıpoètù v rámci tabulky weather
+Projekt_pomocne_tabulky.sql - novì vytvoøené tabulky, které byly následnì pouity v souboru Projekt_final.sql
